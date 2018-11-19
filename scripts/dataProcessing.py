@@ -1,6 +1,5 @@
 from pathlib import Path
 from setup import cachePath, outputPath, createMonthDirectories
-from sqlalchemy import create_engine
 import time
 import pandas as pd
 from scipy import stats

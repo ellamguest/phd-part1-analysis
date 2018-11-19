@@ -1,0 +1,2 @@
+! conda install pandas pathlib scipy -y
+! pip install google-cloud-bigquery
