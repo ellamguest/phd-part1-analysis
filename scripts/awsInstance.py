@@ -18,8 +18,8 @@ def test():
     aws.await_boot(instance) 
 
     # Once you've got it, can check how boot is going with
-    aws.cloud_init_output(instance)
-    ssh(instance) # prints the SSH command needed to connect
+    # aws.cloud_init_output(instance)
+    # ssh(instance) # prints the SSH command needed to connect
 
     # Set up a tunnel to the remote kernel, set up the rsync, then start a remote console
     aws.tunnel(instance)
@@ -33,10 +33,7 @@ def test():
     # Use the console and ! commands to install any packages you need. Then create an image with
     aws.create_image(instance, name='python-ec2') # will create image
     
-    
-    
-    
-    
+
     
     # to open saved image - not working now???
     instance = aws.request_spot('python', .15, script=aws.CONFIG, image='python-ec2')
