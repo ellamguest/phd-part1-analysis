@@ -1,0 +1,8 @@
+{"REGION": "us-east-1",
+ "AVAILABILITY_ZONE": "us-east-1d",
+ "KEYPAIR": "ellamguest",
+ "SSH_GROUP": "ellamguest-ssh",
+ "MUTUAL_ACCESS_GROUP": "ellamguest-mutual-access",
+ "IAM_ROLE": "ec2-phd-part1-analysis",
+ "IMAGE": "ami-0ff8a91507f77f867",
+ "INSTANCE": "m4.xlarge"}

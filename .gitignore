@@ -108,7 +108,6 @@ venv.bak/
 *.png
 *.pdf
 
-/aws
 /cache
 /credentials
 /data
