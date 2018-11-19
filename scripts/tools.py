@@ -40,18 +40,3 @@ def fetchQuery(query):
     df = j.to_dataframe()
 
     return df
-
-"""CALCULATING MEASURES"""
-def gini(values):
-    "calculate the gini coefficient for a list of values"
-    v = values.copy()
-    v.sort()
-
-    sum_iy = 0
-    for i, y in enumerate(v):
-        i += 1
-        sum_iy += i*y
-
-    sum_y = sum(v)
-    n = len(v)
-    return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
