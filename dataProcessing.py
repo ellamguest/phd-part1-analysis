@@ -169,9 +169,22 @@ def runMonthTest(year, month):
     runSubredditStats(copy, date, output=True)
     print()
     
-def testCode():
-    runMonthTest('2018', '01')
-    print("DONE!")
+def oldCode():
+    start = time.time()
+    date = getDate('2018', '01')
+    df = pd.read_csv(cachePath(f"""{date}/author-subreddit-counts-plus-author-stats.csv"""), index_col=0)
+    runSubredditStats(df, date, output=True)
+    end = time.time()
+    print(f"""original code took {end-start}""")
+    
+    
+def newCode():
+    start = time.time()
+    date = getDate('2018', '01')
+    df = pd.read_csv(cachePath(f"""{date}/author-subreddit-counts-plus-author-stats.csv"""), index_col=0)
+    subredditStats(df)
+    end = time.time()
+    print(f"""new code took {end-start}""")
     
 """ import cProfile
 cProfile.run('testCode()', "path_to_stats.prof_file") 
