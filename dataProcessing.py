@@ -1,6 +1,9 @@
 import pandas as pd
 from scipy import stats
 from pathlib import Path
+import time
+import pickle
+from aws import s3
 
 """Collecting data from bigquery"""
 
@@ -10,10 +13,12 @@ except ImportError:
     import pip
     pip.main(['install', '--upgrade', 'google-cloud-bigquery'])
     
-cachePath = lambda filename: Path(f"""../cache/{filename}""")
-credentialsPath = lambda filename: Path(f"""../credentials/{filename}""")
-outputPath = lambda filename: Path(f"""../output/{filename}""")
+cachePath = lambda filename: Path(f"""cache/{filename}""")
+credentialsPath = lambda filename: Path(f"""credentials/{filename}""")
+outputPath = lambda filename: Path(f"""output/{filename}""")
 
+getDate = lambda year, month: f"""{year}-{month}"""
+    
 def client():
     """REQUIRES A FILE CALLED 'bigquery.json' in credentials folder"""
     bigquery_credentials = credentialsPath('bigquery.json')
@@ -31,7 +36,7 @@ def fetchQuery(query, year, month, cache=False):
     j = client().query(query=query, job_config=jobConfig())
     df = j.to_dataframe()
     if cache:
-        date = f"""{year}-{month}"""
+        date = getDate(year, month)
         df.to_csv(cachePath(f"""{date}/author-subreddit-counts.csv"""))
 
     return df
@@ -114,7 +119,7 @@ def subredditLevelStats(df, date, output=False):
 def runSubredditStats(df, date, **kwargs):
     aggregateAuthorLevelStats(df, date, **kwargs)
     subredditLevelStats(df, date, **kwargs)
-
+    
 def loadSubredditStats(date):
     authorLevel = pd.read_csv(outputPath(f"""{date}/aggregateAuthorLevelStats.csv"""),
                               index_col=0, header=[0,1])
@@ -140,15 +145,46 @@ def mainStats(date, stat='50%'):
 
 def createDirectories(date):
     """creates sub-directories for monthly data, if they don't exist already"""
-    Path(f"""../cache/{date}""").mkdir(exist_ok=True, parents=True)
-    Path(f"""../output/{date}""").mkdir(exist_ok=True, parents=True)
+    Path(f"""cache/{date}""").mkdir(exist_ok=True, parents=True)
+    Path(f"""output/{date}""").mkdir(exist_ok=True, parents=True)
 
-def runMonth(year, month):
-    date = f"""{year}-{month}"""
+def runMonthTest(year, month):
+    date = getDate(year, month)
     createDirectories(date)
     
     print(f"""fetching and caching author subreddit pair data for {date}""")
     query = f"""SELECT * FROM `author-subreddit-counts.{year}.{month}` LIMIT 1000"""
+    df = fetchQuery(query, year=year, month=month, cache=False)
+    print()
+    
+    print(f"""opening raw date for {date}""")
+    df = pd.read_csv(cachePath(f"""{date}/author-subreddit-counts.csv"""), index_col=0)
+    print()
+    
+    print(f"""getting author stats for {date}""")
+    copy = getAuthorStats(df, date, cache=False)
+    print()
+    
+    print(f"""getting subreddit stats for {date}""")
+    runSubredditStats(copy, date, output=True)
+    print()
+    
+def testCode():
+    runMonthTest('2018', '01')
+    print("DONE!")
+    
+""" import cProfile
+cProfile.run('testCode()', "path_to_stats.prof_file") 
+
+"""
+    
+def runMonth(year, month):
+    start_time = time.time()
+    date = getDate(year, month)
+    createDirectories(date)
+    
+    print(f"""fetching and caching author subreddit pair data for {date}""")
+    query = f"""SELECT * FROM `author-subreddit-counts.{year}.{month}`"""
     df = fetchQuery(query, year=year, month=month, cache=True)
     print()
     
@@ -163,6 +199,22 @@ def runMonth(year, month):
     print(f"""getting subreddit stats for {date}""")
     runSubredditStats(copy, date, output=True)
     print()
+    
+    end_time = time.time()
+    print(f"""Done, that took {end_time-start_time} seconds""")
+    
+def saveToS3(date):
+    authorLevel, subredditLevel = loadSubredditStats(date)
+  
+    s3.Path("emg-phd-part1/2018-01/aggregateAuthorLevelStats.csv").write_bytes(pickle.dumps(authorLevel))
+    s3.Path("emg-phd-part1/2018-01/subredditLevelStats.csv").write_bytes(pickle.dumps(subredditLevel))
+    
+def pullFromS3(date):
+    authorLevel = s3.Path("emg-phd-part1/2018-01/aggregateAuthorLevelStats.csv").read_bytes()
+    
+    with open(outputPath(f"""{date}/authorLevel.pickle"""), 'wb') as filename:
+        pickle.dump(authorLevel, filename)
+
     
 def main():
     createDirectories()

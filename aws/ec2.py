@@ -277,6 +277,10 @@ def example():
     # The command below will wait till the instance is booted, then start a rsync, SSH tunnel and remote console.
     # It'll also print a SSH command for the console if you want to remote in and check things yourself.
     session = ec2.session(instance)
+    
+    # in remote console install required packages
+    # on local working directory copy over bigquery credentials with:
+    # f"scp {ssh_options()} credentials/bigquery.json {host(instance)}:/home/ec2-user/code/credentials/bigquery.json"""
 
     # If the rsync/ssh/client fail, you can restart the session with
     ec2.restart_session(session)

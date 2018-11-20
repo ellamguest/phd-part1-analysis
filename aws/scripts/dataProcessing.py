@@ -1,35 +1,62 @@
-from pathlib import Path
-from setup import cachePath, outputPath, createMonthDirectories
-import time
 import pandas as pd
 from scipy import stats
+from pathlib import Path
 
+"""Collecting data from bigquery"""
+
+try:
+ from google.cloud import bigquery
+except ImportError:
+    import pip
+    pip.main(['install', '--upgrade', 'google-cloud-bigquery'])
+    
+cachePath = lambda filename: Path(f"""../cache/{filename}""")
+credentialsPath = lambda filename: Path(f"""../credentials/{filename}""")
+outputPath = lambda filename: Path(f"""../output/{filename}""")
+
+def client():
+    """REQUIRES A FILE CALLED 'bigquery.json' in credentials folder"""
+    bigquery_credentials = credentialsPath('bigquery.json')
+    return bigquery.Client.from_service_account_json(bigquery_credentials)
+
+def jobConfig():
+    config = bigquery.QueryJobConfig()
+    config.query_parameters = (bigquery.ScalarQueryParameter('size', 'INT64', 10),)
+    config.use_legacy_sql = False
+    config.maximum_bytes_billed = int(7e9)
+
+    return config
+
+def fetchQuery(query, year, month, cache=False):
+    j = client().query(query=query, job_config=jobConfig())
+    df = j.to_dataframe()
+    if cache:
+        date = f"""{year}-{month}"""
+        df.to_csv(cachePath(f"""{date}/author-subreddit-counts.csv"""))
+
+    return df
 
 def getAuthorStats(df, date, cache=False):
     """takes df with columns author, subreddit, num_author_comments
-    calculates the num_comments, num_subreddits, and comment-entropy per author_stats
-    merges author-level stats with a copy of the original df
-    calculates the in-subreddit ratio for each author-subreddit pair
-    returns df with columns author, subreddit, num_author_comments, author_total_subreddits, author_comment_entropy, author_insubreddit_ratio
+    returns adds columns author_total_subreddits, author_comment_entropy, author_insubreddit_ratio
     """
     print("calculating author-level stats...")
     copy = df.copy()
     author_stats = pd.DataFrame({'author_total_subreddits':copy.groupby('author')['subreddit'].count(),
                                  'author_total_comments':copy.groupby('author')['num_comments'].sum(),
                                  'author_comment_entropy':copy.groupby('author')['num_comments'].apply(
-                                    lambda x: stats.entropy(x))
+                                    lambda x: stats.entropy(x))})
 
-    # author_stats.to_csv(cachePath('{}/author_stats.csv'.format(date))) # too large?
-                                    })
     copy = copy.merge(author_stats, left_on='author', right_index=True)
     copy['author_insubreddit_ratio']=copy['num_comments']/copy['author_total_comments']
     
     if cache:
-        copy.to_csv(cachePath(date + '/author-subreddit-counts-plus-author-stats.csv'))
+        copy.to_csv(cachePath(f"""{date}/author-subreddit-counts-plus-author-stats.csv"""))
 
     return copy
 
 def aggregateAuthorLevelStats(df, date, output=False):
+    """! NEED IT FIX MULTIINDEXING """
     print("getting distribution stats on author num comments, num subreddits, and insubreddit ratio...")
     num_author_subreddits = df.groupby('subreddit')['author_total_subreddits'].describe()
     num_author_comments = df.groupby('subreddit')['author_total_comments'].describe()
@@ -46,8 +73,8 @@ def aggregateAuthorLevelStats(df, date, output=False):
     results = results.merge(author_subreddit_entropy, left_index=True, right_index=True)
 
     if output:
-        results_filename = '{}/aggregateAuthorLevelStats.csv'.format(date)
-        results.to_csv(outputPath(results_filename))
+        results.to_csv(
+                outputPath(f"""{date}/aggregateAuthorLevelStats.csv"""))
 
 def gini(values):
     "calculate the gini coefficient for a list of values"
@@ -65,46 +92,82 @@ def gini(values):
 
 def subredditLevelStats(df, date, output=False):
     print("calculating subreddit author entropy...")
-    df["subreddit_author_entropy"] = df.groupby('subreddit')['num_comments'].apply(lambda x: stats.entropy(x))
+    author_entropy = df.groupby('subreddit')['num_comments'].apply(lambda x: stats.entropy(x))
 
     print("calculating subreddit author gini coefficient...")
-    df["subreddit_author_gini"] = df.groupby('subreddit')['num_comments'].apply(lambda x: gini(list(x)))
+    author_gini = df.groupby('subreddit')['num_comments'].apply(lambda x: gini(list(x)))
 
     print("calculating subreddit author and comment counts...")
-    df['subreddit_author_count'] = df.groupby('subreddit')['author'].count()
-    df['subreddit_comment_count'] = df.groupby('subreddit')['num_comments'].sum()
+    author_count = df.groupby('subreddit')['author'].count()
+    comment_count = df.groupby('subreddit')['num_comments'].sum()
+    
+    results = pd.concat([author_entropy, author_gini,
+                         author_count, comment_count], axis=1)
+    results.columns = ['subreddit_author_entropy', 'subreddit_author_gini', 
+                       'subreddit_author_count', 'subreddit_comment_count']
 
     if output:
-        results_filename = '{}/subredditLevelStats.csv'.format(date)
-        df.to_csv(outputPath(results_filename))
+
+        results.to_csv(
+                outputPath(f"""{date}/subredditLevelStats.csv"""))
 
 def runSubredditStats(df, date, **kwargs):
     aggregateAuthorLevelStats(df, date, **kwargs)
     subredditLevelStats(df, date, **kwargs)
 
 def loadSubredditStats(date):
-    authorLevel_file = outputPath('{}/aggregateAuthorLevelStats.csv'.format(date))
-    authorLevel = pd.read_csv(authorLevel_file, index_col=0, header=[0,1])
+    authorLevel = pd.read_csv(outputPath(f"""{date}/aggregateAuthorLevelStats.csv"""),
+                              index_col=0, header=[0,1])
 
-    subredditLevel_file = outputPath('{}/subredditLevelStats.csv'.format(date))
-    subredditLevel = pd.read_csv(subredditLevel_file, index_col=0, header=[0,1])
+    subredditLevel = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""),
+                                 index_col=0, header=0)
 
     return authorLevel, subredditLevel
 
-def mainStats(date):
+def mainStats(date, stat='50%'):
+    """merge subreddit level stats with author level stats
+    stats should be one of ['25%', '50%', '75%', 'count', 'max', 'mean', 'min', 'std']"""
     authorLevel, subredditLevel = loadSubredditStats(date)
+    authorMeasures = list(authorLevel.columns.levels[0])
     
+    authorLevel.columns = authorLevel.columns.droplevel()
+    subset = authorLevel[stat]
+    
+    subset.columns = [f"""{measure}_{stat}""" for measure in authorMeasures]
+    
+    result = subredditLevel.merge(subset, left_index=True, right_index=True)
+    return result
 
-def main():
-    start_time = time.time()
+def createDirectories(date):
+    """creates sub-directories for monthly data, if they don't exist already"""
+    Path(f"""../cache/{date}""").mkdir(exist_ok=True, parents=True)
+    Path(f"""../output/{date}""").mkdir(exist_ok=True, parents=True)
 
-    year, month = '2018','02'
-    date = '{}-{}'.format(year, month)
-
-    print(start_time, "fetching data from bigquery...")
-    df = pd.read_csv(cachePath(date + '/author-subreddit-counts.csv'), index_col=0)
-
+def runMonth(year, month):
+    date = f"""{year}-{month}"""
+    createDirectories(date)
+    
+    print(f"""fetching and caching author subreddit pair data for {date}""")
+    query = f"""SELECT * FROM `author-subreddit-counts.{year}.{month}` LIMIT 1000"""
+    df = fetchQuery(query, year=year, month=month, cache=True)
+    print()
+    
+    print(f"""opening raw date for {date}""")
+    df = pd.read_csv(cachePath(f"""{date}/author-subreddit-counts.csv"""), index_col=0)
+    print()
+    
+    print(f"""getting author stats for {date}""")
     copy = getAuthorStats(df, date, cache=True)
+    print()
+    
+    print(f"""getting subreddit stats for {date}""")
     runSubredditStats(copy, date, output=True)
-
-    authorLevel, subredditLevel = loadSubredditStats(date)
+    print()
+    
+def main():
+    createDirectories()
+    """currently have author, subreddit pair data for jan to may 2018"""
+    year = '2018'
+    months = ['01','02','03','04','05']
+    for month in months:
+        runMonth(year, month)
