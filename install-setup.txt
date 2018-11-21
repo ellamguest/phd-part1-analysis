@@ -1,2 +1,3 @@
 ! conda install boto3 pandas pathlib scipy -y
 ! pip install google-cloud-bigquery
+! pip install google-cloud-storage
