@@ -294,7 +294,7 @@ def example():
     # Be warned - this'll reboot the machine. Only use this for dependencies and the like; for workspace data, use S3.
 
     # In future, generate the instance from an image with
-    instance = ec2.request_spot('python', .25, script=ec2.CONFIG, image='python-ec2')
+    instance = ec2.request_spot('python', .25, script=ec2.CONFIG, image='python-ec2-2xlarge')
     session = ec2.session(instance)
 
     # At the end, 
