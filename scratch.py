@@ -60,12 +60,23 @@ def statsDf():
         date = getDate('2018', month)
         df = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
         df['month'] = int(month)
-        dfs.append(date)
+        dfs.append(df)
         
-    result = pd.concat(dfs)
-        
-    return results
+    return pd.concat(dfs)
 
 stats = statsDf()
+
+stats[stats['subreddit']=='changemyview'].plot('month','subreddit_id')
+stats[stats['subreddit']=='The_Donald'].plot('month','subreddit_id')
+
+corrs = {}
+for month in stats['month'].unique():
+    monthly = stats[stats['month']==month].drop(['subreddit','month'], axis=1)
+    corrs[month] = monthly.corr()
+    
+x = stats.copy()
+x.index = x['subreddit']
+x =x.drop(['subreddit','month'], axis=1)
         
-sample('05')
+td = x.loc['The_Donald']
+td.pct_change().T

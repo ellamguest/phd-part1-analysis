@@ -34,6 +34,17 @@ def rsyncCloudStorage(origin, destination):
 
 
 
+""" TRY FILE SYSTEM TO READ INTO DF WITHOUT SAVING"""
+
+def gcsfs_example():
+    import gcsfs
+    fs = gcsfs.GCSFileSystem(project='author-subreddit-counts')
+    fs.ls('emg-author-subreddit-pairs')
+    
+    with fs.open('my-bucket/my-file.txt', 'rb') as f:
+        print(f.read())
+    
+    
 
 
 """COLLECTING DATA FROM GOOGLE BIGQUERY"""
