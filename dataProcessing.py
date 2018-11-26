@@ -19,14 +19,20 @@ pip install google-cloud-storage
 
 def getAuthorStats(df, date, cache=False):
     """takes df with columns author, subreddit, num_author_comments
-    returns adds columns author_total_subreddits, author_comment_entropy, author_insubreddit_ratio
+    returns adds columns author_total_subreddits, author_comment_entropy,
+    author_insubreddit_ratio, author_comment_gini, author_comment_blau
     """
     start = time()
     copy = df.copy()
     author_stats = pd.DataFrame({'author_total_subreddits':copy.groupby('author')['subreddit'].count(),
                                  'author_total_comments':copy.groupby('author')['num_comments'].sum(),
                                  'author_comment_entropy':copy.groupby('author')['num_comments'].apply(
-                                    lambda x: stats.entropy(x))})
+                                    lambda x: stats.entropy(x)),
+                                'author_comment_gini':copy.groupby('author')['num_comments'].apply(
+                                    lambda x: gini(list(x))),
+                                'author_comment_blau':copy.groupby('author')['num_comments'].apply(
+                                    lambda x: blau(list(x)))
+                                    })
 
     copy = copy.merge(author_stats, left_on='author', right_index=True)
     copy['author_insubreddit_ratio']=copy['num_comments']/copy['author_total_comments']
@@ -54,6 +60,13 @@ def gini(values):
 
     return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
 
+def blau(values):
+    pi = values/np.sum(values)
+    pi2 = [p**2 for p in pi]
+    sum_pi2 = np.sum(pi2)
+    
+    return 1-sum_pi2
+
 def makeCSR(df, variable, row_indices, col_indices):
     data = df[variable]
     incidence = csr_matrix((data, (row_indices, col_indices)))
@@ -72,7 +85,8 @@ def subredditLevelCSR(df):
         results[i] = {'subreddit_author_count':np.count_nonzero(values),
                'subreddit_comment_count':np.sum(values),
                'subreddit_author_entropy': stats.entropy(values),
-                       'subreddit_author_gini': gini(values)}
+                       'subreddit_author_gini': gini(values),
+                       'subreddit_author_blau': blau(values)}
 
     return pd.DataFrame.from_dict(results, orient='index')
 
@@ -102,7 +116,8 @@ def describeStatCSR(df, variable):
 
 def authorLevelCSR(df):
     variables = ['author_total_subreddits', 'author_total_comments',
-       'author_comment_entropy', 'author_insubreddit_ratio']
+       'author_comment_entropy', 'author_insubreddit_ratio', 
+       'author_comment_gini','author_comment_blau']
     results = []
     for variable in variables:
         stats = describeStatCSR(df, variable)

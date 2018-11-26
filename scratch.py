@@ -7,6 +7,9 @@ from google.cloud import bigquery
 from google.cloud import storage
 from io import BytesIO
 from dataProcessing import *
+import statsmodels.api as sm
+from scipy import stats
+import matplotlib.pyplot  as plt
 
 
 """IMPORTING DATA FROM GOOGLE CLOUD STORAGE"""
@@ -26,7 +29,7 @@ def sortedSubredditIds(df):
     order = df['subreddit'].value_counts().sort_values(ascending=False).reset_index().reset_index()
     return dict(zip(order['index'], order['level_0']))
 
-def sample(month, num_subreddits=200):
+def runSample(month, num_subreddits=200):
     year = '2018'
     date = getDate(year, month)
     
@@ -52,31 +55,101 @@ def sample(month, num_subreddits=200):
     print("getting subreddit stats")
     subredditStats(updated, date)
 
+def runStats(num_subreddits=200):
+    months = ['01','02','03','04','05',
+              '06','07','08','09','10']
+    for month in months:
+        print('doing month', month)
+        runSample(month, num_subreddits=num_subreddits)
 
 def statsDf():
-    months = ['01','02','03','04','05']
+    months = ['01','02','03','04','05',
+              '06','07','08','09','10']
     dfs = []
     for month in months:
         date = getDate('2018', month)
         df = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
-        df['month'] = int(month)
+        df['month'] = date
         dfs.append(df)
         
     return pd.concat(dfs)
 
-stats = statsDf()
-
-stats[stats['subreddit']=='changemyview'].plot('month','subreddit_id')
-stats[stats['subreddit']=='The_Donald'].plot('month','subreddit_id')
-
-corrs = {}
-for month in stats['month'].unique():
-    monthly = stats[stats['month']==month].drop(['subreddit','month'], axis=1)
-    corrs[month] = monthly.corr()
+def test():
+    stats = statsDf()
     
-x = stats.copy()
-x.index = x['subreddit']
-x =x.drop(['subreddit','month'], axis=1)
+    main=stats[['subreddit','month','subreddit_author_count',
+                'subreddit_comment_count','subreddit_author_entropy',
+                'subreddit_author_gini','subreddit_author_blau',
+                'author_total_subreddits_median', 'author_total_comments_median',
+                'author_comment_entropy_median', 'author_comment_gini_median',
+                'author_comment_blau_median', 'author_insubreddit_ratio_median']]
+    
+    td = feb[feb['subreddit']=='The_Donald'].drop('subreddit', axis=1)
+    cmv = feb[feb['subreddit']=='changemyview'].drop('subreddit', axis=1)
+    
+def getPercentiles(df):
+    td_p = {}
+    for variable in df.columns:
+        td_p[variable] = stats.percentileofscore(df[variable].values,
+            df.loc['The_Donald'][variable])
+
+    cmv_p = {}
+    for variable in df.columns:
+        cmv_p[variable] = stats.percentileofscore(df[variable].values,
+             df.loc['changemyview'][variable])
+
+    return pd.DataFrame({'td':td_p,'cmv':cmv_p})
+    
+    
+def predictedValues(df):
+    X = df["subreddit_comment_count"]
+    
+    preds_df = {}
+    for variable in df.columns:
+        y = df[variable]
+        model = sm.OLS(y, X).fit()
+        preds_df[variable] = model.predict(X)
         
-td = x.loc['The_Donald']
-td.pct_change().T
+    return pd.DataFrame(preds_df)
+
+def expectedVsObserved(df):
+    stats = df.set_index('subreddit').drop('month',axis=1)
+    
+    observedPercentiles = getPercentiles(stats)
+    expectedValues = predictedValues(stats)
+    expectedPercentiles = getPercentiles(expectedValues)
+    
+    return observedPercentiles, expectedPercentiles
+
+def annotatedHist(df, variable, log=False):
+    x = df[variable].sort_values()
+    if log:
+        x = np.log(x)
+    
+    plt.hist(x, cumulative=True, color='grey')
+    
+    xmin, xmax = plt.xlim()
+    tdX = x.loc['The_Donald']
+    tdY = x.index.get_loc('The_Donald')
+    
+    plt.vlines(tdX, 0, tdY, color='red')
+    plt.hlines(tdY, xmin, tdX,
+               color='red', linestyles='dashed')
+    
+    cmvX = x.loc['changemyview']
+    cmvY = x.index.get_loc('changemyview')
+    
+    plt.vlines(cmvX, 0, cmvY, color='green')
+    plt.hlines(cmvY, xmin, cmvX,
+               color='green', linestyles='dashed')
+    
+    plt.title(variable)
+    plt.show()
+    
+def compareHists(df):
+    for variable in df.columns:
+        if variable in ['subreddit_comment_count', 'subreddit_author_count']:
+            annotatedHist(df, variable, log=True)
+        else:
+            annotatedHist(df, variable)
+    

@@ -51,7 +51,7 @@ def gcsfs_example():
 def client():
     """REQUIRES A FILE CALLED 'bigquery.json' in credentials folder"""
     creds = credentialsPath('gcs-credentatials.json')
-    return bigquery.Client.from_service_account_json(creds)
+    return bigquery.Client.from_service_account_json('service_account.json')
 
 def jobConfig():
     config = bigquery.QueryJobConfig()
@@ -69,3 +69,5 @@ def fetchQuery(query, year, month, cache=False):
         df.to_csv(cachePath(f"""{date}/author-subreddit-counts.csv"""))
 
     return df
+
+

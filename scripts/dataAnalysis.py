@@ -1,5 +1,8 @@
 from bokeh.plotting import figure, output_notebook, show, ColumnDataSource
 from bokeh.models import NumeralTickFormatter
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 """PLOTTING"""
@@ -57,17 +60,15 @@ def correlationHeatmap(df, date, save=False):
 
 
 """DATA MANIPULATION"""
-
-def mainStats(results):
-    main = results[['subreddit_comment_count', 'subreddit_author_count', 'subreddit_author_entropy', 'subreddit_author_gini']]
-    main.columns = main.columns.droplevel(1)
-    measures = ['author_insubreddit_ratio', 'author_subreddit_entropy', 'num_author_comments', 'num_author_subreddits']
-    sub = results[measures]
-    sub.columns = sub.columns.droplevel()
-    medians = sub['50%']
-    medians.columns = measures
-    main = main.merge(medians, left_index=True, right_index=True)
-
-    return main
-
 iqr = lambda df, column: df[df[column].between(df[column].quantile(.25), df[column].quantile(.75), inclusive=True)]
+
+
+import statsmodels.api as sm
+X = main["subreddit_comment_count"]
+
+preds = {}
+for variable in percentiles.drop('subreddit_comment_count').columns:
+    y = main[variable]
+    model = sm.OLS(y, X).fit()
+    d[variable] = model.predict(X)
+
