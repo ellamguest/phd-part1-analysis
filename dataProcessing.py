@@ -2,18 +2,52 @@ import pandas as pd
 from scipy import stats
 from pathlib import Path
 from time import time
-import pickle
-from aws import s3
+import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
-import scipy as sp
-from tools import *
+from gcs import fetchBlob, storeBlob, readBlob
 
 REQUIREMENTS = """
 conda install boto3 pandas pathlib scipy -y
 pip install google-cloud-bigquery
 pip install google-cloud-storage
 """
+
+""" TOOLS """
+getDate = lambda year, month: f"""{year}-{month}"""
+cachePath = lambda filename: Path(f"""cache/{filename}""")
+outputPath = lambda filename: Path(f"""output/{filename}""")
+
+def createDirectories(date):
+    """creates sub-directories for monthly data, if they don't exist already"""
+    Path(f"""cache/{date}""").mkdir(exist_ok=True, parents=True)
+    Path(f"""output/{date}""").mkdir(exist_ok=True, parents=True)
+
+
+elapsed = lambda start, end: print(f"""{end-start} elapsed""")  
+
+""" DIVERSITY MEASURES """
+def gini(values):
+    "calculate the gini coefficient for a list of values"
+    v = values.copy()
+    v.sort()
+
+    sum_iy = 0
+    for i, y in enumerate(v):
+        i += 1
+        sum_iy += i*y
+
+    sum_y = sum(v)
+    n = len(v)
+
+    return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
+
+def blau(values):
+    pi = values/np.sum(values)
+    pi2 = [p**2 for p in pi]
+    sum_pi2 = np.sum(pi2)
+    
+    return 1-sum_pi2
 
 """RUNNING STATS ON DATA"""
 
@@ -45,34 +79,12 @@ def getAuthorStats(df, date, cache=False):
 
     return copy
 
-def gini(values):
-    "calculate the gini coefficient for a list of values"
-    v = values.copy()
-    v.sort()
-
-    sum_iy = 0
-    for i, y in enumerate(v):
-        i += 1
-        sum_iy += i*y
-
-    sum_y = sum(v)
-    n = len(v)
-
-    return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
-
-def blau(values):
-    pi = values/np.sum(values)
-    pi2 = [p**2 for p in pi]
-    sum_pi2 = np.sum(pi2)
-    
-    return 1-sum_pi2
 
 def makeCSR(df, variable, row_indices, col_indices):
     data = df[variable]
     incidence = csr_matrix((data, (row_indices, col_indices)))
 
     return incidence
-
 
 def subredditLevelCSR(df):
     incidence = csr_matrix((df['num_comments'], (df['subreddit_id'], df['author_id'])))
@@ -113,7 +125,6 @@ def describeStatCSR(df, variable):
 
     return pd.DataFrame.from_dict(results, orient='index')
 
-
 def authorLevelCSR(df):
     variables = ['author_total_subreddits', 'author_total_comments',
        'author_comment_entropy', 'author_insubreddit_ratio', 
@@ -127,7 +138,7 @@ def authorLevelCSR(df):
     return pd.concat(results, axis=1)
 
 def subredditStats(df, date):
-    authorIds = getIds(df['author'])
+    authorIds = sortedIds(df['author'])
     df['author_id']=df['author'].map(lambda x: authorIds[x])
     
     authorLevel = authorLevelCSR(df)
@@ -141,58 +152,6 @@ def subredditStats(df, date):
     output = output.sort_values('subreddit_comment_count', ascending=False).reset_index(drop=True)
     
     output.to_csv(outputPath(f"""{date}/subredditStats.csv"""))
-
-def addIds(df):
-    subIds = getIds(df['subreddit'])
-    df['subreddit_id']=df['subreddit'].map(lambda x: subIds[x])
-
-    authorIds = getIds(df['author'])
-    df['author_id']=df['author'].map(lambda x: authorIds[x])
-    
-    return df
-    
-
-def runMonth(year, month):
-    start = time()
-
-    date = getDate(year, month)
-    createDirectories(date)
-
-    end = time()
-    elapsed(start,end)
-    print()
-    
-    df = addIds(df)
-
-    start=time()
-    print(f"""getting author stats for {date}""")
-    copy = getAuthorStats(df, date, cache=True)
-
-    end = time()
-    elapsed(start,end)
-    print()
-
-    print(f"""getting subreddit stats for {date}""")
-    subredditStats(copy, date)
-    print()
-
-    end = time()
-    elapsed(start,end)
-
-    print('DONE!')
-
-def saveToS3(date, filename):
-    file = pd.read_csv(outputPath(f"""{date}/{filename}"""))
-
-    s3.Path(f"""emg-phd-part1/{date}/{filename}""").write_bytes(pickle.dumps(file))
-
-
-def pullFromS3(date, filename):
-    """is this actually working?"""
-    file = s3.Path(f"""emg-phd-part1/{date}/{filename}""").read_bytes()
-
-    with open(outputPath(f"""{date}/{filename}"""), 'wb') as filename:
-        pickle.dump(file, filename)
         
 def subsetDF(df):
     defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
@@ -207,10 +166,37 @@ todayilearned+videos+worldnews""".split('+')
                 (~df['subreddit'].str.startswith('u_'))
                 ]
 
-def main():
-    setupGCS()
-    """currently have author, subreddit pair data for jan to may 2018"""
-    year = '2018'
-    months = ['01','02','03','04','05']
-    for month in months:
-        runMonth(year, month)
+def sortedIds(series):
+    order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
+    return dict(zip(order['index'], order['level_0']))
+
+def run(year, month, num_subreddits=200, fetch=False):
+    """
+    pulls data from GCS
+    runs stats on top *num_subreddits* by num of authors
+    """
+    date = getDate(year, month)
+    
+    createDirectories(date)
+    
+    if fetch:
+        print("getting and storing blob for""", date)
+        blob = fetchBlob(date)
+        storeBlob(blob, date) # look into gcsfs to avoiding storing locally
+        
+    print("opening df and subsetting")
+    df = readBlob(date)
+    df = df[['subreddit','author','num_comments']]
+    subset = subsetDF(df)
+    
+    print("getting sub ids and top subreddits")
+    subIds = sortedIds(subset['subreddit'])
+    subset['subreddit_id'] = subset['subreddit'].map(lambda x: subIds[x]) # gets setting with copywarning
+    sample = subset[subset['subreddit_id']<num_subreddits]
+
+    print("getting author stats")
+    updated = getAuthorStats(sample, date) # still longest bit ~ 3 mins
+    
+    print("getting subreddit stats")
+    subredditStats(updated, date)
+
