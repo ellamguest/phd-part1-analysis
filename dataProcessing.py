@@ -5,6 +5,8 @@ from time import time
 import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
+from tools import *
+from google.cloud import storage
 from gcs import fetchBlob, storeBlob, readBlob
 
 REQUIREMENTS = """
@@ -12,19 +14,6 @@ conda install boto3 pandas pathlib scipy -y
 pip install google-cloud-bigquery
 pip install google-cloud-storage
 """
-
-""" TOOLS """
-getDate = lambda year, month: f"""{year}-{month}"""
-cachePath = lambda filename: Path(f"""cache/{filename}""")
-outputPath = lambda filename: Path(f"""output/{filename}""")
-
-def createDirectories(date):
-    """creates sub-directories for monthly data, if they don't exist already"""
-    Path(f"""cache/{date}""").mkdir(exist_ok=True, parents=True)
-    Path(f"""output/{date}""").mkdir(exist_ok=True, parents=True)
-
-
-elapsed = lambda start, end: print(f"""{end-start} elapsed""")  
 
 """ DIVERSITY MEASURES """
 def gini(values):

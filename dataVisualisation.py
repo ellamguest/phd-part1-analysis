@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from bokeh.plotting import figure, output_notebook, show, ColumnDataSource
 from bokeh.models import NumeralTickFormatter
 import seaborn as sns
+from pathlib import Path
+from tools import figurePath
 
 def annotatedHist(df, variable, log=False):
     x = df[variable].sort_values()
@@ -31,6 +33,27 @@ def annotatedHist(df, variable, log=False):
                color='green', linestyles='dashed')
     
     plt.title(variable)
+    plt.show()
+    
+def timePlot(main, variable):
+    agg = main.groupby('month').median()
+    td = main.loc['The_Donald'].select_dtypes(['int64','float64'])
+    cmv = main.loc['changemyview'].select_dtypes(['int64','float64'])
+    
+    f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharey=False, figsize=(8,10))
+    f.suptitle(variable)
+    
+    ax1.plot(agg.index, agg[variable], color='grey')
+    ax1.tick_params(axis='x',labelbottom=False)
+    
+    ax2.plot(agg.index, td[variable], color='red')
+    ax2.tick_params(axis='x',labelbottom=False)
+    
+    ax3.plot(agg.index, cmv[variable], color='green')
+    
+    plt.xticks(rotation='vertical')
+    plt.tight_layout()
+    plt.savefig(figurePath(f"""{variable}.pdf"""))
     plt.show()
     
 def compareHists(df):
@@ -59,7 +82,23 @@ def correlationHeatmap(df, date, save=False):
     plt.title(date)
     plt.tight_layout()
     if save:
-        plt.savefig('{}-corr-heatmap.pdf'.format(date))
+        plt.savefig(figurePath('{}-corr-heatmap.pdf'.format(date)))
+        
+def correlationClustermap(df, date, save=False, metric='cosine'):
+    corr = df.corr()
+
+    # Set up the matplotlib figure
+    #f, ax = plt.subplots(figsize=(11, 9))
+
+    # Generate a custom diverging colormap
+    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+
+    # Draw the heatmap with the mask and correct aspect ratio
+    sns.clustermap(corr, cmap=cmap, vmax=1, center=0,
+                square=True, linewidths=.5, cbar_kws={"shrink": .5}, metric=metric)
+    plt.title(date)
+    if save:
+        plt.savefig(figurePath('{}-corr-clustermap.pdf'.format(date)))
         
         
 """PLOTTING"""

@@ -2,10 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from tools import outputPath
+from dataProcessing import outputPath
 import pandas as pd
-
-
+from scipy import stats
 
 def compileMonths():
     dates = [date for date in os.listdir('output') if date.startswith('20')]
@@ -27,6 +26,31 @@ def mainVariables(df):
                 'author_comment_entropy_median', 'author_comment_gini_median',
                 'author_comment_blau_median', 'author_insubreddit_ratio_median']]
     
+def inverseVariable(df, variables):
+    for variable in variables:
+        df[variable]=1-df[variable]
+    return df
+
+
+
+"""NORMALITY TESTS"""
+
+def normTest(df, variable, log=False):
+    x = df[variable]
+    if log:
+        x = np.log(x)
+    k2, p = stats.normaltest(x)
+    alpha = 1e-3
+    print("p = {:g}".format(p))
+
+    if p < alpha:  # null hypothesis: x comes from a normal distribution
+        print(f"""NOT""")
+    else:
+        print(f"""MAYBE""")
+        
+        
+
+        
 def getPercentiles(df):
     td_p = {}
     for variable in df.columns:
