@@ -5,6 +5,7 @@ import os
 from dataProcessing import outputPath
 import pandas as pd
 from scipy import stats
+import statsmodels.api as sm
 
 def compileMonths():
     dates = [date for date in os.listdir('output') if date.startswith('20')]
@@ -26,11 +27,13 @@ def mainVariables(df):
                 'author_comment_entropy_median', 'author_comment_gini_median',
                 'author_comment_blau_median', 'author_insubreddit_ratio_median']]
     
-def inverseVariable(df, variables):
-    for variable in variables:
-        df[variable]=1-df[variable]
-    return df
+def inverseVariable(df, variable):
+    return 1-df[variable]
 
+def correlations(df):
+    corr = df.corr().stack().sort_values(ascending=False)
+    corr = corr[corr!=1]
+    return corr.drop_duplicates()
 
 
 """NORMALITY TESTS"""
@@ -63,6 +66,11 @@ def getPercentiles(df):
              df.loc['changemyview'][variable])
 
     return pd.DataFrame({'td':td_p,'cmv':cmv_p})
+
+
+def splitBimodal(df, variable):
+    top = jan[jan['author_total_subreddits_median']>=7]
+    bottom = jan[jan['author_total_subreddits_median']<7]
     
     
 def predictedValues(df):
