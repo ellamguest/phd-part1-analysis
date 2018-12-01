@@ -188,4 +188,6 @@ def run(year, month, num_subreddits=200, fetch=False):
     
     print("getting subreddit stats")
     subredditStats(updated, date)
+    
+    subredditStats.to_csv(cachePath(f"""{date}/sample_{num_subreddits}_top_subreddits.csv"""))
 

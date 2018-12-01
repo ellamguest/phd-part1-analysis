@@ -5,6 +5,8 @@ import os
 from dataProcessing import outputPath
 import pandas as pd
 from scipy import stats
+import scipy as sp
+from sklearn.decomposition import PCA
 import statsmodels.api as sm
 
 def compileMonths():
@@ -20,7 +22,7 @@ def compileMonths():
 
 
 def mainVariables(df):
-    return df[['subreddit','month','subreddit_author_count',
+    return df[['subreddit','subreddit_author_count',
                 'subreddit_comment_count','subreddit_author_entropy',
                 'subreddit_author_gini','subreddit_author_blau',
                 'author_total_subreddits_median', 'author_total_comments_median',
@@ -47,9 +49,9 @@ def normTest(df, variable, log=False):
     print("p = {:g}".format(p))
 
     if p < alpha:  # null hypothesis: x comes from a normal distribution
-        print(f"""NOT""")
+        print(f"""NOT normally distributed""")
     else:
-        print(f"""MAYBE""")
+        print(f"""MAYBE normally distributed""")
         
         
 
@@ -92,3 +94,61 @@ def expectedVsObserved(df):
     expectedPercentiles = getPercentiles(expectedValues)
     
     return observedPercentiles, expectedPercentiles
+
+def plot(X):
+    n = X.shape[1]
+    width = int(n**.5)
+    height = int(sp.ceil(n/width))
+    fig, axes = plt.subplots(height, width, sharey=True)
+    
+    for (name, series), ax in zip(X.iteritems(), axes.flatten()):
+        series.plot.hist(ax=ax, title=name)
+        ax.set_ylabel('')
+    
+    for ax in axes.flatten()[n+1:]:
+        ax.display(False)
+    
+    fig.subplots_adjust(hspace=.5)
+    
+def pca(main):
+    X = main.copy()
+    X['subreddit_author_count'] = X['subreddit_author_count'].apply(sp.log)
+    X['subreddit_comment_count'] = X['subreddit_comment_count'].apply(sp.log)
+    X['subreddit_author_blau'] = (1 - X['subreddit_author_blau']).apply(sp.log)
+    
+    signs = pd.Series(1, X.columns)
+    signs[['subreddit_author_blau', 'subreddit_author_gini']] = -1
+    
+    # PCA
+    mu, sigma = X.mean(), X.std()
+    X = (X - mu)/sigma
+    
+    m = PCA().fit(X)
+    U = pd.DataFrame(m.components_, None, X.columns)
+    explained = pd.Series(m.explained_variance_ratio_)
+    
+    Y = pd.DataFrame(m.transform(X), X.index, None)
+    
+    # Abnormality in latent space (need to use less than D components!)
+    Xhat = Y.dot(U) + m.mean_
+    residual = (X - Xhat).pow(2).sum(1).pow(.5).sort_values()
+    ranks = pd.Series(1, residual.sort_values().index).cumsum().pipe(lambda s: s/s.max())
+    
+    # Plotting latent factors
+    Y.plot.scatter(0, 1)
+    probes = ['the_donald', 'changemyview', 'latestagecapitalism']
+    for p in probes:
+        y = Y.rename(index=str.lower).loc[p]
+        plt.annotate(p, (y[0], y[1]))
+        
+    
+    # Controlling for size
+    x = X.subreddit_author_count
+    ys = X
+    b = ys.corrwith(x)
+    Xhat = b[None, :]*x[:, None]
+    
+    e = X - Xhat
+    ranks = e.rank().pipe(lambda df: df/len(df))
+    
+    ranks.rename(index=str.lower).loc[probes].T.stack().sort_values()

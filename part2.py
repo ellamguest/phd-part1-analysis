@@ -15,22 +15,8 @@ import networkx as nx
 import scipy as sp
 
 
-def getSample(year, month, num_subreddits=200, fetch=False):
-    """
-    pulls data from GCS
-    runs stats on top *num_subreddits* by num of authors
-    """
-    date = getDate(year, month)
-    
-    createDirectories(date)
-    
-    if fetch:
-        print("getting and storing blob for""", date)
-        blob = fetchBlob(date)
-        storeBlob(blob, date) # look into gcsfs to avoiding storing locally
-        
-    print("opening df and subsetting")
-    df = readBlob(date)
+def getSample(df, num_subreddits=200):
+    print("subsetting df")
     df = df[['subreddit','author','num_comments']]
     subset = subsetDF(df)
     
@@ -62,8 +48,6 @@ def adjMatrix(sample):
     m.columns = m.index
     
     return m
-w
-
 
 def add_edges_fast(names, adj):
     G = nx.Graph()
@@ -90,3 +74,28 @@ def projectSub(df, top='subreddit',bottom='author'):
     G = add_edges_fast(top_unique, adj)
 
     return G
+
+def subGraph(G, node):
+    """get the ego network of node, including edges between alters
+    using to compute meta-echo chamber density...
+    """
+
+def run():
+    date = '2017-11'
+    
+    print(f"""opening df for {date}""")
+    df = readBlob(date)
+    
+    num_subreddits=500
+    sample = getSample(df, num_subreddits=num_subreddits)
+    
+    G = projectSub(sample)
+    
+def test():
+    row = sample['subreddit_id']
+    col = sample['author_id']
+    data = sp.ones(len(row))
+    incidence = sp.sparse.coo_matrix((data, (row, col)))
+    adj = incidence.dot(incidence.T)
+    
+    
