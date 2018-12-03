@@ -1,13 +1,15 @@
 import pandas as pd
 from scipy import stats
 from pathlib import Path
-from time import time
+import time
 import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
 from tools import *
 from google.cloud import storage
 from gcs import fetchBlob, storeBlob, readBlob
+from tqdm import tqdm
+from andyTools import parallel
 
 REQUIREMENTS = """
 conda install boto3 pandas pathlib scipy -y
@@ -41,42 +43,43 @@ def blau(values):
 """RUNNING STATS ON DATA"""
 def getAuthorStats(df):
     """slicing the csr is still the least efficient part of data processing"""
-    start = time()
+    start = time.time()
     incidence = csr_matrix((df['num_comments'], (df['author_id'], df['subreddit_id'])))
     
     results = {}
     for i in df['author_id'].unique():
-        if i%500 == 0:
-            print(i)
-            
-        subset = incidence[i].toarray()
-        values = subset[np.nonzero(subset)]
-
+        values = incidence[i,:].data
         results[i] = {'aut_sub_count':np.count_nonzero(values),
                'aut_com_count':np.sum(values),
                'aut_com_entropy': stats.entropy(values),
                        'aut_com_gini': gini(values),
                        'aut_com_blau': blau(values)}
-        
+    
     authorStats = pd.DataFrame.from_dict(results, orient='index')
     authorStats.index = df['author_id'].unique()
     
     result = df.merge(authorStats, left_on='author_id', right_index=True)
     result['aut_insub'] = result['num_comments']/result['aut_com_count']
     
-    end = time()
+    end = time.time()
     elapsed(start, end)
 
     return result
 
+def authorLevelCSRParallel(df):
+    incidence = csr_matrix((df['num_comments'], (df['author_id'], df['subreddit_id'])))
+    with parallel(authorStats) as g:
+         results = g.wait({i: g(incidence[i,:].data) for i in df['author_id'].unique()})
 
-def subredditLevelCSR(df):
+    return pd.DataFrame.from_dict(results, orient='index')
+
+
+
+def subredditLevelCSROld(df):
     incidence = csr_matrix((df['num_comments'], (df['subreddit_id'], df['author_id'])))
-
     results = {}
     for i in df['subreddit_id'].unique():
-        subset = incidence[i].toarray()
-        values = subset[np.nonzero(subset)]
+        values = incidence[i,:].data
 
         results[i] = {'subreddit_author_count':np.count_nonzero(values),
                'subreddit_comment_count':np.sum(values),
@@ -85,6 +88,25 @@ def subredditLevelCSR(df):
                        'subreddit_author_blau': blau(values)}
 
     return pd.DataFrame.from_dict(results, orient='index')
+
+def subStats(values):
+    return {'author_count':np.count_nonzero(values),
+               'comment_count':np.sum(values),
+               'entropy': stats.entropy(values),
+                       'gini': gini(values),
+                       'blau': blau(values)}
+
+def subredditLevelCSR(df, row='subreddit_id', col='author_id'):
+    row = df[row]
+    col = df[col]
+    
+    data = [1] * row.shape[0]
+    incidence = csr_matrix((data, (row, col)))
+    with parallel(subStats) as g:
+         results = g.wait({i: g(incidence[i,:].data) for i in row.unique()})
+
+    return pd.DataFrame.from_dict(results, orient='index')
+
 
 def describeStatCSR(df, variable):
     incidence = csr_matrix((df[variable], (df['subreddit_id'], df['author_id'])))
@@ -157,6 +179,7 @@ def run(year, month, num_subreddits=100000, fetch=False):
     runs stats on top *num_subreddits* by num of authors
     """
     date = getDate(year, month)
+    print(date)
     
     createDirectories(date)
     
@@ -167,18 +190,23 @@ def run(year, month, num_subreddits=100000, fetch=False):
         
     print("opening df and subsetting")
     df = readBlob(date)
-    #df = df[['subreddit','author','num_comments']]
     clean = cleanDF(df)
     
     print("getting sub ids and top subreddits")
     subIds = sortedIds(clean['subreddit'])
-    clean['subreddit_id'] = clean['subreddit'].map(lambda x: subIds[x]) # gets setting with copywarning
+    clean['subreddit_id'] = clean['subreddit'].map(lambda x: subIds[x])
+    
+    authorIds = sortedIds(clean['author'])
+    clean['author_id']=clean['author'].map(lambda x: authorIds[x])
+    
+    
     subset = clean[clean['subreddit_id']<num_subreddits]
 
     print("getting author stats")
-    authorIds = sortedIds(subset['author'])
-    subset['author_id']=subset['author'].map(lambda x: authorIds[x])
-    authorStats = getAuthorStats(subset) # still longest bit, also gets setting with copywarning
+
+    authorStats = getAuthorStats(subset)
+    
+    authorStats.to_csv(cachePath('authorStats.gzip'),compression='gzip')
     
     print("getting subreddit stats")
     subredditStats(authorStats, date)
