@@ -39,41 +39,36 @@ def blau(values):
     return 1-sum_pi2
 
 """RUNNING STATS ON DATA"""
-
-def getAuthorStats(df, date, cache=False):
-    """takes df with columns author, subreddit, num_author_comments
-    returns adds columns author_total_subreddits, author_comment_entropy,
-    author_insubreddit_ratio, author_comment_gini, author_comment_blau
-    """
+def getAuthorStats(df):
+    """slicing the csr is still the least efficient part of data processing"""
     start = time()
-    copy = df.copy()
-    author_stats = pd.DataFrame({'author_total_subreddits':copy.groupby('author')['subreddit'].count(),
-                                 'author_total_comments':copy.groupby('author')['num_comments'].sum(),
-                                 'author_comment_entropy':copy.groupby('author')['num_comments'].apply(
-                                    lambda x: stats.entropy(x)),
-                                'author_comment_gini':copy.groupby('author')['num_comments'].apply(
-                                    lambda x: gini(list(x))),
-                                'author_comment_blau':copy.groupby('author')['num_comments'].apply(
-                                    lambda x: blau(list(x)))
-                                    })
+    incidence = csr_matrix((df['num_comments'], (df['author_id'], df['subreddit_id'])))
+    
+    results = {}
+    for i in df['author_id'].unique():
+        if i%500 == 0:
+            print(i)
+            
+        subset = incidence[i].toarray()
+        values = subset[np.nonzero(subset)]
 
-    copy = copy.merge(author_stats, left_on='author', right_index=True)
-    copy['author_insubreddit_ratio']=copy['num_comments']/copy['author_total_comments']
-
+        results[i] = {'aut_sub_count':np.count_nonzero(values),
+               'aut_com_count':np.sum(values),
+               'aut_com_entropy': stats.entropy(values),
+                       'aut_com_gini': gini(values),
+                       'aut_com_blau': blau(values)}
+        
+    authorStats = pd.DataFrame.from_dict(results, orient='index')
+    authorStats.index = df['author_id'].unique()
+    
+    result = df.merge(authorStats, left_on='author_id', right_index=True)
+    result['aut_insub'] = result['num_comments']/result['aut_com_count']
+    
     end = time()
     elapsed(start, end)
 
-    if cache:
-        copy.to_csv(cachePath(f"""{date}/author-subreddit-counts-plus-author-stats.csv"""))
+    return result
 
-    return copy
-
-
-def makeCSR(df, variable, row_indices, col_indices):
-    data = df[variable]
-    incidence = csr_matrix((data, (row_indices, col_indices)))
-
-    return incidence
 
 def subredditLevelCSR(df):
     incidence = csr_matrix((df['num_comments'], (df['subreddit_id'], df['author_id'])))
@@ -115,9 +110,8 @@ def describeStatCSR(df, variable):
     return pd.DataFrame.from_dict(results, orient='index')
 
 def authorLevelCSR(df):
-    variables = ['author_total_subreddits', 'author_total_comments',
-       'author_comment_entropy', 'author_insubreddit_ratio', 
-       'author_comment_gini','author_comment_blau']
+    variables = ['aut_sub_count', 'aut_com_count', 'aut_com_entropy', 'aut_com_gini',
+       'aut_com_blau', 'aut_insub']
     results = []
     for variable in variables:
         stats = describeStatCSR(df, variable)
@@ -127,9 +121,6 @@ def authorLevelCSR(df):
     return pd.concat(results, axis=1)
 
 def subredditStats(df, date):
-    authorIds = sortedIds(df['author'])
-    df['author_id']=df['author'].map(lambda x: authorIds[x])
-    
     authorLevel = authorLevelCSR(df)
     subredditLevel = subredditLevelCSR(df)
 
@@ -142,13 +133,14 @@ def subredditStats(df, date):
     
     output.to_csv(outputPath(f"""{date}/subredditStats.csv"""))
         
-def subsetDF(df):
+def cleanDF(df):
     defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
 LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+WritingPrompts+\
 announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
 gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
 personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
 todayilearned+videos+worldnews""".split('+')
+    defaults.append('politics')
     
     return df[(~df['subreddit'].isin(defaults)) &
                 (~df['author'].isin(['[deleted]','AutoModerator'])) &
@@ -159,7 +151,7 @@ def sortedIds(series):
     order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
     return dict(zip(order['index'], order['level_0']))
 
-def run(year, month, num_subreddits=200, fetch=False):
+def run(year, month, num_subreddits=100000, fetch=False):
     """
     pulls data from GCS
     runs stats on top *num_subreddits* by num of authors
@@ -175,19 +167,20 @@ def run(year, month, num_subreddits=200, fetch=False):
         
     print("opening df and subsetting")
     df = readBlob(date)
-    df = df[['subreddit','author','num_comments']]
-    subset = subsetDF(df)
+    #df = df[['subreddit','author','num_comments']]
+    clean = cleanDF(df)
     
     print("getting sub ids and top subreddits")
-    subIds = sortedIds(subset['subreddit'])
-    subset['subreddit_id'] = subset['subreddit'].map(lambda x: subIds[x]) # gets setting with copywarning
-    sample = subset[subset['subreddit_id']<num_subreddits]
+    subIds = sortedIds(clean['subreddit'])
+    clean['subreddit_id'] = clean['subreddit'].map(lambda x: subIds[x]) # gets setting with copywarning
+    subset = clean[clean['subreddit_id']<num_subreddits]
 
     print("getting author stats")
-    updated = getAuthorStats(sample, date) # still longest bit ~ 3 mins
+    authorIds = sortedIds(subset['author'])
+    subset['author_id']=subset['author'].map(lambda x: authorIds[x])
+    authorStats = getAuthorStats(subset) # still longest bit, also gets setting with copywarning
     
     print("getting subreddit stats")
-    subredditStats(updated, date)
-    
-    subredditStats.to_csv(cachePath(f"""{date}/sample_{num_subreddits}_top_subreddits.csv"""))
+    subredditStats(authorStats, date)
+
 

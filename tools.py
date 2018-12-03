@@ -20,4 +20,4 @@ def createDirectories(date):
     Path(f"""output/{date}""").mkdir(exist_ok=True, parents=True)
 
 
-elapsed = lambda start, end: print(f"""{end-start} elapsed""")  
+elapsed = lambda start, end: print(f"""{end-start}/60 minutes elapsed""")  

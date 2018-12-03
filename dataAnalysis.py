@@ -9,7 +9,7 @@ import scipy as sp
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
 
-def compileMonths():
+def compileAll():
     dates = [date for date in os.listdir('output') if date.startswith('20')]
     dfs = []
     for date in dates:
@@ -19,15 +19,31 @@ def compileMonths():
         
     return pd.concat(dfs)
 
+def annualComparison():
+    month = 11
+    years = [2015,2016,2017,2018]
+    dates = [getDate(year, month) for year in years]
+    dfs = []
+    for date in dates:
+        df = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
+        main = mainVariables(df)
+        main['month'] = date
+        dfs.append(main)
+        
+    return pd.concat(dfs)
+        
+
 
 
 def mainVariables(df):
-    return df[['subreddit','subreddit_author_count',
+    main = df[['subreddit','subreddit_author_count',
                 'subreddit_comment_count','subreddit_author_entropy',
                 'subreddit_author_gini','subreddit_author_blau',
-                'author_total_subreddits_median', 'author_total_comments_median',
-                'author_comment_entropy_median', 'author_comment_gini_median',
-                'author_comment_blau_median', 'author_insubreddit_ratio_median']]
+                'aut_sub_count_median', 'aut_com_count_median',
+                'aut_com_entropy_median', 'aut_com_gini_median',
+                'aut_com_blau_median', 'aut_insub_median']] 
+    
+    return main.set_index('subreddit').drop('SubredditSimulator')
     
 def inverseVariable(df, variable):
     return 1-df[variable]
@@ -110,35 +126,46 @@ def plot(X):
     
     fig.subplots_adjust(hspace=.5)
     
-def pca(main):
+def andy(main):
     X = main.copy()
+    
     X['subreddit_author_count'] = X['subreddit_author_count'].apply(sp.log)
     X['subreddit_comment_count'] = X['subreddit_comment_count'].apply(sp.log)
-    X['subreddit_author_blau'] = (1 - X['subreddit_author_blau']).apply(sp.log)
+    X['subreddit_author_blau'] = -1*(1-X['subreddit_author_blau']).apply(sp.log)
+    X['subreddit_author_gini'] = 1-X['subreddit_author_gini']
     
-    signs = pd.Series(1, X.columns)
-    signs[['subreddit_author_blau', 'subreddit_author_gini']] = -1
-    
+    corrs = X.corr().stack().sort_values(ascending=False)
+    corrs = corrs.drop_duplicates()
+    corrs = corrs[corrs<1]
+    corrs.head(10)
+
     # PCA
-    mu, sigma = X.mean(), X.std()
-    X = (X - mu)/sigma
+    slim = confoundLess(df)
+    X = slim.copy()
+   
+    U, explained, Y = pca(X)
     
-    m = PCA().fit(X)
-    U = pd.DataFrame(m.components_, None, X.columns)
+    # plot pca
+    U.loc[0].sort_values().plot(kind='barh', title='PCA cluster 0')
+    U.loc[1].plot(kind='barh', title='PCA cluster 1')
+    
     explained = pd.Series(m.explained_variance_ratio_)
     
     Y = pd.DataFrame(m.transform(X), X.index, None)
     
+    subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
+    PCA_results = Y.loc[subs][[0,1]]
+    
     # Abnormality in latent space (need to use less than D components!)
     Xhat = Y.dot(U) + m.mean_
     residual = (X - Xhat).pow(2).sum(1).pow(.5).sort_values()
-    ranks = pd.Series(1, residual.sort_values().index).cumsum().pipe(lambda s: s/s.max())
+    PCA_ranks = pd.Series(1, residual.sort_values().index).cumsum().pipe(lambda s: s/s.max())
     
     # Plotting latent factors
     Y.plot.scatter(0, 1)
-    probes = ['the_donald', 'changemyview', 'latestagecapitalism']
-    for p in probes:
-        y = Y.rename(index=str.lower).loc[p]
+    probes = ['the_donald', 'changemyview', 'SandersForPresident', 'latestagecapitalism']
+    for p in subs:
+        y = Y.loc[p]
         plt.annotate(p, (y[0], y[1]))
         
     
@@ -151,4 +178,59 @@ def pca(main):
     e = X - Xhat
     ranks = e.rank().pipe(lambda df: df/len(df))
     
+    
+    results = ranks.loc[subs].T.drop('subreddit_author_count')
+
+    
     ranks.rename(index=str.lower).loc[probes].T.stack().sort_values()
+    
+def pca(df, n_components=3):
+    mu, sigma = df.mean(), df.std()
+    
+    # get normalised standard score
+    X = (df - mu)/sigma
+    
+    m = PCA(n_components).fit(X)
+    
+    #components
+    U = pd.DataFrame(m.components_, None, X.columns)
+    
+    explained = pd.Series(m.explained_variance_ratio_)
+    
+    Y = pd.DataFrame(m.transform(X), X.index, None)
+    
+    return U, explained, Y
+    
+def confoundLess(df):
+    """
+    auth_com_blau_median and auth_com_entropy_median ~ 96% correlated
+    - choose blau because simpler metric to interpret?
+    
+    subreddit_author_blau and subreddit_author_entropy ~ 89% correlated
+    - also choose blau
+    
+    aut_com_count_median, aut_sub_count_median ~ 96% correlated
+    - choose sub count bc more interested in diversity than activity
+    
+    subreddit_author_gini and subreddit_author_blau ~73% correlated
+    - diagnose outliers where they are least correlated
+    - what are the measures accounting for differently?
+    - probably still choose blau? unless can sufficiently argue they highlight
+    -- different processes
+    
+    auth_com_entropy_median and aut_sub_count_median ~89% correlated
+    - so definitely need to account for sub count when interpreting entropy
+    
+    basics
+    - size = sub count
+    - diversity = blau
+    - at both sub and author levels
+    """
+    
+    return df[['subreddit_author_count', 
+               'subreddit_author_blau', 
+               'aut_sub_count_median', 
+               'aut_com_blau_median',
+               'aut_insub_median']]
+    
+    
