@@ -31,8 +31,6 @@ def annualComparison():
         dfs.append(main)
         
     return pd.concat(dfs)
-        
-
 
 
 def mainVariables(df):
@@ -42,6 +40,13 @@ def mainVariables(df):
                 'aut_sub_count_median', 'aut_com_count_median',
                 'aut_com_entropy_median', 'aut_com_gini_median',
                 'aut_com_blau_median', 'aut_insub_median']] 
+
+    main.columns = ['subreddit','num_auts',
+                'num_coms','sub_ent',
+                'sub_gini','sub_blau',
+                'med_num_subs', 'med_num_coms',
+                'med_ent', 'med_gini',
+                'med_blau', 'med_insub']
     
     return main.set_index('subreddit').drop('SubredditSimulator')
     
@@ -145,15 +150,13 @@ def andy(main):
    
     U, explained, Y = pca(X)
     
-    # plot pca
-    U.loc[0].sort_values().plot(kind='barh', title='PCA cluster 0')
-    U.loc[1].plot(kind='barh', title='PCA cluster 1')
+    
     
     explained = pd.Series(m.explained_variance_ratio_)
     
     Y = pd.DataFrame(m.transform(X), X.index, None)
     
-    subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
+    
     PCA_results = Y.loc[subs][[0,1]]
     
     # Abnormality in latent space (need to use less than D components!)
@@ -168,21 +171,20 @@ def andy(main):
         y = Y.loc[p]
         plt.annotate(p, (y[0], y[1]))
         
+def sizeControlled(df, size_variable='num_auts'):
+    X = df.copy()
     
-    # Controlling for size
-    x = X.subreddit_author_count
+    x = X[size_variable]
     ys = X
     b = ys.corrwith(x)
     Xhat = b[None, :]*x[:, None]
     
     e = X - Xhat
+    
     ranks = e.rank().pipe(lambda df: df/len(df))
-    
-    
-    results = ranks.loc[subs].T.drop('subreddit_author_count')
 
-    
-    ranks.rename(index=str.lower).loc[probes].T.stack().sort_values()
+    return ranks
+
     
 def pca(df, n_components=3):
     mu, sigma = df.mean(), df.std()
@@ -200,6 +202,12 @@ def pca(df, n_components=3):
     Y = pd.DataFrame(m.transform(X), X.index, None)
     
     return U, explained, Y
+
+def pcaPlot(U):
+    fig, axes = plt.subplots(nrows=2, ncols=2)
+    for i in U.index:
+        U.loc[i].plot(kind='barh', title=f"""PCA cluster {i}""", ax=axes[i])
+        #plt.show()
     
 def confoundLess(df):
     """
@@ -227,10 +235,13 @@ def confoundLess(df):
     - at both sub and author levels
     """
     
-    return df[['subreddit_author_count', 
-               'subreddit_author_blau', 
-               'aut_sub_count_median', 
-               'aut_com_blau_median',
-               'aut_insub_median']]
+    return df[['num_auts', 
+               'sub_blau', 
+               'med_num_subs', 
+               'med_blau',
+               'med_insub']]
     
     
+def compareSubs(df):
+    subs = subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
+    return df.loc[subs]

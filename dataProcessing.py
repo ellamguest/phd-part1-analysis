@@ -151,7 +151,7 @@ def subredditStats(df, date):
     subIds = dict(zip(df['subreddit_id'],df['subreddit']))
     output['subreddit_id'] = output.index
     output['subreddit'] = output['subreddit_id'].map(lambda x: subIds[x])
-    output = output.sort_values('subreddit_comment_count', ascending=False).reset_index(drop=True)
+    output = output.sort_values('subreddit_id', ascending=False).reset_index(drop=True)
     
     output.to_csv(outputPath(f"""{date}/subredditStats.csv"""))
         
@@ -164,21 +164,23 @@ personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television
 todayilearned+videos+worldnews""".split('+')
     defaults.append('politics')
     
-    return df[(~df['subreddit'].isin(defaults)) &
-                (~df['author'].isin(['[deleted]','AutoModerator'])) &
-                (~df['subreddit'].str.startswith('u_'))
+    clean = df.astype({'author':str,'subreddit':str,'num_comments':int})
+    return clean[(~clean['subreddit'].isin(defaults)) &
+                (~clean['author'].isin(['[deleted]','AutoModerator'])) &
+                (~clean['subreddit'].str.startswith('u_'))
                 ]
 
 def sortedIds(series):
     order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
     return dict(zip(order['index'], order['level_0']))
 
-def run(year, month, num_subreddits=100000, fetch=False):
+def run(year, month, num_subreddits=500, fetch=False):
     """
     pulls data from GCS
     runs stats on top *num_subreddits* by num of authors
     """
     date = getDate(year, month)
+
     print(date)
     
     createDirectories(date)
@@ -206,7 +208,7 @@ def run(year, month, num_subreddits=100000, fetch=False):
 
     authorStats = getAuthorStats(subset)
     
-    authorStats.to_csv(cachePath('authorStats.gzip'),compression='gzip')
+    authorStats.to_csv(cachePath(f"""top_{num_subreddits}_authorStats.gzip"""),compression='gzip')
     
     print("getting subreddit stats")
     subredditStats(authorStats, date)
