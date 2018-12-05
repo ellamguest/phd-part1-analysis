@@ -32,23 +32,24 @@ def annualComparison():
         
     return pd.concat(dfs)
 
+def updateColumns(oldDf, newDf):
+        old = oldDf.columns
+        new = newDf.colums
+
 
 def mainVariables(df):
-    main = df[['subreddit','subreddit_author_count',
-                'subreddit_comment_count','subreddit_author_entropy',
-                'subreddit_author_gini','subreddit_author_blau',
-                'aut_sub_count_median', 'aut_com_count_median',
-                'aut_com_entropy_median', 'aut_com_gini_median',
-                'aut_com_blau_median', 'aut_insub_median']] 
+    main = df.copy().set_index('subreddit')
+    cols = main.columns
 
-    main.columns = ['subreddit','num_auts',
-                'num_coms','sub_ent',
-                'sub_gini','sub_blau',
-                'med_num_subs', 'med_num_coms',
-                'med_ent', 'med_gini',
-                'med_blau', 'med_insub']
+    oldSubCols = [col for col in cols if col.startswith('subreddit')]
+    if 'entropy' in cols: # hacky until update column names on all datasets
+        newSubCols = ['author_count', 'comment_count', 'entropy', 'gini', 'blau']
+    else:
+        newSubCols = []
+    medianCols = [col for col in cols if col.endswith('median')]
+    mainCols = oldSubCols + newSubCols + medianCols
     
-    return main.set_index('subreddit').drop('SubredditSimulator')
+    return main[mainCols]
     
 def inverseVariable(df, variable):
     return 1-df[variable]
@@ -203,12 +204,16 @@ def pca(df, n_components=3):
     
     return U, explained, Y
 
-def pcaPlot(U):
-    fig, axes = plt.subplots(nrows=2, ncols=2)
+def pcaPlot(U, date=None, save=False):
+    fig, axes = plt.subplots(nrows=3, ncols=1)
     for i in U.index:
-        U.loc[i].plot(kind='barh', title=f"""PCA cluster {i}""", ax=axes[i])
-        #plt.show()
-    
+        U.loc[i].plot(kind='barh', title=f"""PCA cluster {i}""", ax=axes[i], figsize=(8,12))
+    fig.suptitle(date, fontsize=14)
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)
+    if save:
+        plt.savefig(figurePath(f"""{date}/PCA_components.png"""))
+
 def confoundLess(df):
     """
     auth_com_blau_median and auth_com_entropy_median ~ 96% correlated
@@ -245,3 +250,22 @@ def confoundLess(df):
 def compareSubs(df):
     subs = subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
     return df.loc[subs]
+
+
+
+def pcaComparison(dates):
+    dfs = {}
+    mains = {}
+    pcas = {}
+
+    for date in dates:
+        createDirectories(date)
+        df = dfs[date] = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
+        cols = df.columns
+        dfs[date] = df
+
+    for date in dates:
+        mains[date] = mainmainVariables(dfs[date])
+        
+    for date in dates:
+        pcas[date] = pca(mains[date])

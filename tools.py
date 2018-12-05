@@ -19,6 +19,7 @@ outputPath = lambda filename: Path(f"""output/{filename}""")
 def createDirectories(date):
     """creates sub-directories for monthly data, if they don't exist already"""
     Path(f"""cache/{date}""").mkdir(exist_ok=True, parents=True)
+    Path(f"""figures/{date}""").mkdir(exist_ok=True, parents=True)
     Path(f"""output/{date}""").mkdir(exist_ok=True, parents=True)
 
 
