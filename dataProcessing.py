@@ -40,6 +40,17 @@ def blau(values):
     
     return 1-sum_pi2
 
+def blauNormal(blau, N):
+    """
+    takes the blau and size of population (N)
+    returns the normalized Herfindahl index
+    """
+    nom = blau - (1/N)
+    den = 1 - (1/N)
+
+    return nom / den
+
+
 """RUNNING STATS ON DATA"""
 def getAuthorStats(df):
     """slicing the csr is still the least efficient part of data processing"""
