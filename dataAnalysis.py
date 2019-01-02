@@ -10,7 +10,8 @@ from sklearn.decomposition import PCA
 import statsmodels.api as sm
 
 def compileAll():
-    dates = [date for date in os.listdir('output') if date.startswith('20')]
+    #dates = [date for date in os.listdir('output') if date.startswith('20')]
+    dates = ['2015-11','2016-11','2017-11', '2018-10']
     dfs = []
     for date in dates:
         df = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
@@ -38,7 +39,8 @@ def updateColumns(oldDf, newDf):
 
 
 def mainVariables(df):
-    main = df.copy().set_index('subreddit')
+    #main = df.copy().set_index('subreddit')
+    main = df.copy()
     cols = main.columns
 
     oldSubCols = [col for col in cols if col.startswith('subreddit')]
@@ -58,50 +60,13 @@ def correlations(df):
     corr = df.corr().stack().sort_values(ascending=False)
     corr = corr[corr!=1]
     return corr.drop_duplicates()
-
-
-"""NORMALITY TESTS"""
-
-def normTest(df, variable, log=False):
-    x = df[variable]
-    if log:
-        x = np.log(x)
-    k2, p = stats.normaltest(x)
-    alpha = 1e-3
-    print("p = {:g}".format(p))
-
-    if p < alpha:  # null hypothesis: x comes from a normal distribution
-        print(f"""NOT normally distributed""")
-    else:
-        print(f"""MAYBE normally distributed""")
-        
-        
-
-        
-def getPercentiles(df):
-    td_p = {}
-    for variable in df.columns:
-        td_p[variable] = stats.percentileofscore(df[variable].values,
-            df.loc['The_Donald'][variable])
-
-    cmv_p = {}
-    for variable in df.columns:
-        cmv_p[variable] = stats.percentileofscore(df[variable].values,
-             df.loc['changemyview'][variable])
-
-    return pd.DataFrame({'td':td_p,'cmv':cmv_p})
-
-
-def splitBimodal(df, variable):
-    top = jan[jan['author_total_subreddits_median']>=7]
-    bottom = jan[jan['author_total_subreddits_median']<7]
     
     
 def predictedValues(df):
     X = df["subreddit_comment_count"]
     
     preds_df = {}
-    for variable in df.columns:
+    for variable in df.select_dtypes(['float64','int64']).columns:
         y = df[variable]
         model = sm.OLS(y, X).fit()
         preds_df[variable] = model.predict(X)
@@ -109,11 +74,9 @@ def predictedValues(df):
     return pd.DataFrame(preds_df)
 
 def expectedVsObserved(df):
-    stats = df.set_index('subreddit').drop('month',axis=1)
-    
-    observedPercentiles = getPercentiles(stats)
-    expectedValues = predictedValues(stats)
-    expectedPercentiles = getPercentiles(expectedValues)
+    observedPercentiles = df.rank()
+    expectedValues = predictedValues(df)
+    expectedPercentiles = expectedValues.rank()
     
     return observedPercentiles, expectedPercentiles
 
@@ -239,18 +202,20 @@ def confoundLess(df):
     - diversity = blau
     - at both sub and author levels
     """
+    cols = df.columns()
+    cols = [col for col in cols if 'entropy' not in col]
+    cols = [col for col in cols if 'aut_com' not in col]
+    cols = [col for col in cols if '25%' not in col]
+    cols = [col for col in cols if '75%' not in col]
+    cols = [col for col in cols if 'mean' not in col]
+    cols.remove('subreddit_id')
     
-    return df[['num_auts', 
-               'sub_blau', 
-               'med_num_subs', 
-               'med_blau',
-               'med_insub']]
+    return df[cols]
     
     
 def compareSubs(df):
     subs = subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
     return df.loc[subs]
-
 
 
 def pcaComparison(dates):
@@ -261,11 +226,5 @@ def pcaComparison(dates):
     for date in dates:
         createDirectories(date)
         df = dfs[date] = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
-        cols = df.columns
-        dfs[date] = df
-
-    for date in dates:
-        mains[date] = mainmainVariables(dfs[date])
-        
-    for date in dates:
-        pcas[date] = pca(mains[date])
+        main = mainVariables(df)
+        U, explained, Y = pca(main, n_components=4)
