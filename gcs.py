@@ -17,7 +17,7 @@ def fetchBlob(date):
     bucket = storage_client().get_bucket('emg-author-subreddit-pairs')
     return bucket.blob(f"""{date}.gzip""")
 
-storeBlob = lambda blob, date: blob.download_to_filename(cachePath(f"""{date}/author-subreddit-pairs.gzip"""))
+storeBlob = lambda blob, date: blob.download_to_filename(cachePath(f"""{date}/author-subreddit-pairs.gzip"""))  
 readBlob = lambda date: pd.read_csv(cachePath(f"""{date}/author-subreddit-pairs.gzip"""), compression="gzip")
 
 
