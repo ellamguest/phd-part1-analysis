@@ -9,19 +9,6 @@ import scipy as sp
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
 
-def compileAll():
-    #dates = [date for date in os.listdir('output') if date.startswith('20')]
-    dates = ['2015-11','2016-11','2017-11', '2018-10']
-    dfs = []
-    for date in dates:
-        df = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
-        df['month'] = date
-        dfs.append(df)
-        
-    return pd.concat(dfs)
-
-def subsetStats(date, num_subreddits=500):
-    return pd.read_csv(outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv"""), index_col=0)
 
 def mainVariables(df):
     main = df.copy()
@@ -154,17 +141,85 @@ def pcaPlot(U, date=None, save=False):
         plt.savefig(figurePath(f"""{date}/PCA_components.png"""))
     
 def compareSubs(df):
-    subs = subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
+    subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
     return df.loc[subs]
 
+def loadStats(date, num_subreddits):
+    if outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv""").is_file():
+        return pd.read_csv(outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv"""), index_col=0)
+    else:
+        print("data not found")
 
-def pcaComparison(dates):
-    dfs = {}
-    mains = {}
-    pcas = {}
+getDates = lambda: sorted(next(os.walk("cache"))[1])
 
-    for date in dates:
-        createDirectories(date)
-        df = dfs[date] = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
+def getDict(df):
         main = mainVariables(df)
-        U, explained, Y = pca(main, n_components=4)
+        U, explained, Y = pca(main.drop('subreddit', axis=1), n_components=3)
+        subset = compareSubs(df)
+
+        d[date] = {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
+
+def loadMonths(num_subreddits=500):
+    dates = getDates()
+    d ={}
+    for date in dates:
+        df = loadStats(date, num_subreddits)
+        df.index.name = 'subreddit_id'
+        df = df.set_index('subreddit',drop=False)
+        main = mainVariables(df)
+        U, explained, Y = pca(main.drop('subreddit', axis=1), n_components=3)
+        subset = compareSubs(df)
+
+        d[date] = {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
+
+    return d
+
+def separateDefaults(num_subreddits=500):
+    defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
+LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+WritingPrompts+\
+announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
+gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
+personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
+todayilearned+videos+worldnews""".split('+')
+    dates = getDates()
+    df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
+
+        d ={}
+    for date in dates:
+        df = loadStats(date, num_subreddits)
+        df.index.name = 'subreddit_id'
+        df = df.set_index('subreddit',drop=False)
+
+        default = df[df.index.isin(defaults)]
+        nondefault = df[~df.index.isin(defaults)]
+
+        main = mainVariables(df)
+        U, explained, Y = pca(main.drop('subreddit', axis=1), n_components=3)
+        subset = compareSubs(df)
+
+        d[date] = {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
+
+
+
+def compareExplained():
+    d = loadMonths()
+    dates = getDates()
+    e = [d[date]['explained'] for date in dates]
+
+    trend = pd.concat(e, axis=1)
+    trend.columns = dates
+
+    trend.T.plot(title='explained')
+
+def variableTrends():
+    d = loadMonths()
+    dates = getDates()
+
+    variables = d[dates[0]]['U'].columns
+    for variable in variables:
+        v = [d[date]['U'][variable] for date in dates]
+
+        trend = pd.concat(v, axis=1)
+        trend.columns = dates
+
+        trend.T.plot(title=variable)
