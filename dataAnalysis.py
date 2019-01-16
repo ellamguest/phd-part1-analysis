@@ -20,47 +20,23 @@ def compileAll():
         
     return pd.concat(dfs)
 
-def annualComparison():
-    month = 11
-    years = [2015,2016,2017,2018]
-    dates = [getDate(year, month) for year in years]
-    dfs = []
-    for date in dates:
-        df = pd.read_csv(outputPath(f"""{date}/subredditStats.csv"""), index_col=0)
-        main = mainVariables(df)
-        main['month'] = date
-        dfs.append(main)
-        
-    return pd.concat(dfs)
-
-def updateColumns(oldDf, newDf):
-        old = oldDf.columns
-        new = newDf.colums
-
+def subsetStats(date, num_subreddits=500):
+    return pd.read_csv(outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv"""), index_col=0)
 
 def mainVariables(df):
-    #main = df.copy().set_index('subreddit')
     main = df.copy()
     cols = main.columns
 
-    oldSubCols = [col for col in cols if col.startswith('subreddit')]
-    if 'entropy' in cols: # hacky until update column names on all datasets
-        newSubCols = ['author_count', 'comment_count', 'entropy', 'gini', 'blau']
-    else:
-        newSubCols = []
+    subCols = ['author_count', 'comment_count', 'entropy', 'gini', 'blau']
     medianCols = [col for col in cols if col.endswith('median')]
-    mainCols = oldSubCols + newSubCols + medianCols
+    mainCols = subCols + medianCols
     
     return main[mainCols]
     
-def inverseVariable(df, variable):
-    return 1-df[variable]
-
 def correlations(df):
     corr = df.corr().stack().sort_values(ascending=False)
     corr = corr[corr!=1]
     return corr.drop_duplicates()
-    
     
 def predictedValues(df):
     X = df["subreddit_comment_count"]
@@ -176,42 +152,6 @@ def pcaPlot(U, date=None, save=False):
     plt.subplots_adjust(top=0.9)
     if save:
         plt.savefig(figurePath(f"""{date}/PCA_components.png"""))
-
-def confoundLess(df):
-    """
-    auth_com_blau_median and auth_com_entropy_median ~ 96% correlated
-    - choose blau because simpler metric to interpret?
-    
-    subreddit_author_blau and subreddit_author_entropy ~ 89% correlated
-    - also choose blau
-    
-    aut_com_count_median, aut_sub_count_median ~ 96% correlated
-    - choose sub count bc more interested in diversity than activity
-    
-    subreddit_author_gini and subreddit_author_blau ~73% correlated
-    - diagnose outliers where they are least correlated
-    - what are the measures accounting for differently?
-    - probably still choose blau? unless can sufficiently argue they highlight
-    -- different processes
-    
-    auth_com_entropy_median and aut_sub_count_median ~89% correlated
-    - so definitely need to account for sub count when interpreting entropy
-    
-    basics
-    - size = sub count
-    - diversity = blau
-    - at both sub and author levels
-    """
-    cols = df.columns()
-    cols = [col for col in cols if 'entropy' not in col]
-    cols = [col for col in cols if 'aut_com' not in col]
-    cols = [col for col in cols if '25%' not in col]
-    cols = [col for col in cols if '75%' not in col]
-    cols = [col for col in cols if 'mean' not in col]
-    cols.remove('subreddit_id')
-    
-    return df[cols]
-    
     
 def compareSubs(df):
     subs = subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']

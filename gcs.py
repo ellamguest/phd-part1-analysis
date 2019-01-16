@@ -20,6 +20,30 @@ def fetchBlob(date):
 storeBlob = lambda blob, date: blob.download_to_filename(cachePath(f"""{date}/author-subreddit-pairs.gzip"""))  
 readBlob = lambda date: pd.read_csv(cachePath(f"""{date}/author-subreddit-pairs.gzip"""), compression="gzip")
 
+def writeBlob(date):
+    bucket = storage_client().get_bucket('emg-author-subreddit-pairs')
+    blob = bucket.blob(f"""{date}-IDS.gzip""")
+
+    filename = cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""")
+    with open(filename, 'r') as f:
+        blob.upload_from_file(f)
+
+def upload_blob(source_file_name, destination_blob_name):
+    """Uploads a file to the bucket
+    but slow"""
+    bucket = storage_client().get_bucket('emg-author-subreddit-pairs')
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print('File {} uploaded to {}.'.format(
+        source_file_name,
+        destination_blob_name))
+
+def uploadIDs(date):
+    upload_blob(str(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""")), f"""{date}-IDs.gzip""")
+
+
 
 """COLLECTING DATA FROM GOOGLE BIGQUERY"""
 bigquery_client = lambda: bigquery.Client.from_service_account_json('service_account.json')
