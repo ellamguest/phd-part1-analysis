@@ -9,8 +9,12 @@ from tools import *
 from google.cloud import storage
 from gcs import fetchBlob, storeBlob, readBlob
 from tqdm import tqdm
-from andyTools import parallel]
+from andyTools import parallel
 import os
+from tqdm import tqdm
+import logging
+
+log = logging.getLogger(__name__)
 
 REQUIREMENTS = """
 conda install boto3 pandas pathlib scipy -y
@@ -52,43 +56,75 @@ def blauNormal(blau, N):
     return nom / den
 
 
-"""RUNNING STATS ON DATA"""
-from tqdm import tqdm
+"""RUNNING STATS ON DATA"""   
+def csr(df, row, col, data):
+    row = df[row]
+    col = df[col]
+    data = df[data]
 
-def authorStats(values):
-    return {'aut_sub_count':np.count_nonzero(values),
+    return csr_matrix((data, (row, col)))
+
+
+def getAuthorStats(df, date, num_subreddits, cache=True):
+    """slicing the csr is still the least efficient part of data processing"""
+    print("getting author stats") # LONGEST PART, STILL TAKES A FEW MINUTES
+
+    start = time.time()
+
+    incidence = csr(df, 'author_id', 'subreddit_id', 'num_comments')
+    
+    results = {}
+    for i in tqdm(df['author_id'].unique()):
+        values = incidence[i,:].data
+        results[i] = {'aut_sub_count':np.count_nonzero(values),
                'aut_com_count':np.sum(values),
                'aut_com_entropy': stats.entropy(values),
                        'aut_com_gini': gini(values),
                        'aut_com_blau': blau(values)}
-                       
-def getAuthorStats(df):
-    """slicing the csr is still the least efficient part of data processing"""
-    start = time.time()
-
-    row = df['author_id']
-    col = df['subreddit_id']
-    data = df['num_comments']
-
-    incidence = csr_matrix((data, (row, col)))
     
-    results = {}
-    for i in tqdm(row.unique()):
-        values = incidence[i,:].data
-        results[i] = authorStats(values)
+    output = pd.DataFrame.from_dict(results, orient='index')
+    output.index = df['author_id'].unique()
     
-    authorStats = pd.DataFrame.from_dict(results, orient='index')
-    authorStats.index = df['author_id'].unique()
-    
-    result = df.merge(authorStats, left_on='author_id', right_index=True)
+    result = df.merge(output, left_on='author_id', right_index=True)
     result['aut_insub'] = result['num_comments']/result['aut_com_count']
     
     end = time.time()
     elapsed(start, end)
 
+    if cache:
+        start = time.time()
+        print("storing author stats")
+        result.to_csv(cachePath(f"""{date}/top_{num_subreddits}_authorStats.gzip"""),compression='gzip')
+
+        end = time.time()
+        elapsed(start, end)
+
     return result
 
-def rangeStats(values):
+def subStats(values):
+    return {'author_count':np.count_nonzero(values),
+               'comment_count':np.sum(values),
+               'entropy': stats.entropy(values),
+                       'gini': gini(values),
+                       'blau': blau(values)}
+
+def getSubredditStats(df, date, num_subreddits, cache=True):
+    print("getting aggregate level subreddit stats")
+    incidence = csr(df, 'subreddit_id', 'author_id', 'num_comments')
+    with parallel(subStats) as g:
+         results = g.wait({i: g(incidence[i,:].data) for i in df['subreddit_id'].unique()})
+
+    output = pd.DataFrame.from_dict(results, orient='index')
+    
+    reverseSubIds = dict(zip(df['subreddit_id'],df['subreddit']))
+    output['subreddit'] = output.index.map(lambda x: reverseSubIds[x])
+
+    if cache:
+        output.to_csv(outputPath(f"""{date}/top_{num_subreddits}_subredditLevelStats.csv"""))
+
+    return output
+
+def aggtats(values):
     lower, median, upper = np.percentile(values, [25,50,75])
     return {
                     'min':np.min(values),
@@ -100,20 +136,16 @@ def rangeStats(values):
                     '75%':upper
                     }
 
-def authorLevelCSR(df):
+def authorAggStats(df):
     variables = ['aut_sub_count', 'aut_com_count', 'aut_com_entropy', 'aut_com_gini',
        'aut_com_blau', 'aut_insub']
     
     stats = []
     for variable in variables:
-        print(variable)
-        row = df['subreddit_id']
-        col = df['author_id']
-        data = df[variable].values
-        incidence = csr_matrix((data, (row, col)))
+        incidence = csr_matrix(df, 'subreddit_id', 'author_id', variable)
 
-        with parallel(rangeStats) as g:
-            results = g.wait({i: g(incidence[i,:].data) for i in row.unique()})
+        with parallel(aggStats) as g:
+            results = g.wait({i: g(incidence[i,:].data) for i in df['subreddit_id'].unique()})
 
         output = pd.DataFrame.from_dict(results, orient='index')
         output.columns = [f"""{variable}_{stat}""" for stat in output.columns]
@@ -122,23 +154,22 @@ def authorLevelCSR(df):
 
     return pd.concat(stats, axis=1)
 
-def subStats(values):
-    return {'author_count':np.count_nonzero(values),
-               'comment_count':np.sum(values),
-               'entropy': stats.entropy(values),
-                       'gini': gini(values),
-                       'blau': blau(values)}
+def getAggAuthorStats(date, num_subreddits):
+    df = pd.read_csv(cachePath(f"""{date}/top_{num_subreddits}_authorStats.gzip"""),compression='gzip')
+    print("getting aggregate level author stats")
+    authorAgg = authorAggStats(df)
 
-def subredditLevelCSR(df, row='subreddit_id', col='author_id'):
-    row = df[row]
-    col = df[col]
-    
-    data = df['num_comments'].values
-    incidence = csr_matrix((data, (row, col)))
-    with parallel(subStats) as g:
-         results = g.wait({i: g(incidence[i,:].data) for i in row.unique()})
 
-    return pd.DataFrame.from_dict(results, orient='index')
+    reverseSubIds = dict(zip(df['subreddit_id'],df['subreddit']))
+    authorAgg['subreddit'] = authorAgg.index.map(lambda x: reverseSubIds[x])
+    authorAgg.to_csv(outputPath(f"""{date}/top_{num_subreddits}_authorLevelStats.csv"""))
+
+def filenames(date, num_subreddits):
+    subFile = outputPath(f"""{date}/top_{num_subreddits}_subredditLevelStats.csv""")
+    autFile = cachePath(f"""{date}/top_{num_subreddits}_authorStats.gzip""")
+    autAggFile = outputPath(f"""{date}/top_{num_subreddits}_authorLevelStats.csv""")
+
+    return subFile, autFile, autAggFile
 
 def subredditStats(df, date):
     subIds = dict(zip(df['subreddit_id'],df['subreddit']))
@@ -173,7 +204,7 @@ def sortedIds(series):
     order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
     return dict(zip(order['index'], order['level_0']))
 
-def getIds(df, cache=True):
+def getIds(df, date, cache=True):
     df = df.astype({'author':str,'subreddit':str,'num_comments':int})
 
     print("getting subreddit ids")
@@ -202,7 +233,7 @@ def loadDF(date):
         df = readBlob(date)
 
         print("getting ids")
-        return getIds(df)
+        return getIds(df, date)
     else:
         print(f"""getting and storing blob for {date}""")
         blob = fetchBlob(date)
@@ -221,20 +252,43 @@ def run(date, num_subreddits=500):
     print(f"""getting subreddit of {num_subreddits} subreddits""")
     subset = df[df['subreddit_id']<num_subreddits]
 
-    print("getting aggregate level subreddit stats")
-    subredditLevel = subredditLevelCSR(subset)
-    reverseSubIds = dict(zip(df['subreddit_id'],df['subreddit']))
-    subredditLevel['subreddit'] = subredditLevel.index.map(lambda x: reverseSubIds[x])
-    subredditLevel.to_csv(outputPath(f"""{date}/subredditLevelStats.csv"""))
+    subFile, autFile, autAggFile = filenames(date, num_subreddits)
+
+    if subFile.is_file():
+        print("opening subreddit level stats")
+        subredditLevel = pd.read_csv(subFile)
+    else:
+        print("need to get subreddit level stats")
+        subredditLevel = getSubredditStats(df, date, num_subreddits)
+
+
+    if autAggFile.is_file():
+        print("opening author agg stats")
+        authorLevel = pd.read_csv(authFile)
+    else:
+        print("need to get author agg stats")
+        
+        if autFile.is_file():
+            print("opening author level stats")
+            authorLevel = pd.read_csv(authFile)
+            
+        else:
+            print("need to get author level stats")
+            autorLevel = getAuthorStats(df, date, num_subreddits)
+        
+
+
 
     print("getting author stats") # LONGEST PART, STILL TAKES A FEW MINUTES
-    authorStats = getAuthorStats(subset)
-    authorStats.to_csv(cachePath(f"""{date}/top_{num_subreddits}_authorStats.gzip"""),compression='gzip')
+    authorLevel = getAuthorStats(subset)
+
+    print("storing author stats")
+    authorLevel.to_csv(cachePath(f"""{date}/top_{num_subreddits}_authorStats.gzip"""),compression='gzip')
 
     print("getting aggregate level author stats")
-    authorLevel = authorLevelCSR(authorStats)
-    authorLevel['subreddit'] = authorLevel.index.map(lambda x: reverseSubIds[x])
-    authorLevel.to_csv(outputPath(f"""{date}/authorLevelStats.csv"""))
+    authorAgg = authorLevelCSR(authorLevel)
+    authorAgg['subreddit'] = authorAgg.index.map(lambda x: reverseSubIds[x])
+    authorAgg.to_csv(outputPath(f"""{date}/authorLevelStats.csv"""))
 
     output = pd.merge(subredditLevel, authorLevel, on='subreddit')
     output.to_csv(outputPath(f"""{date}/subredditStats.csv"""))
