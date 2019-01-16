@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Nov 27 12:08:20 2018
-
-@author: emg
-"""
 from pathlib import Path
 import time
 import datetime
@@ -24,6 +17,8 @@ def createDirectories(date):
 
 
 elapsed = lambda start, end: print(f"""{(end-start)/60} minutes elapsed""") 
+
+
 
 
 
@@ -60,3 +55,20 @@ WHERE (created_utc >= {np.int(start)}) & (created_utc <= {np.int(end)})
 GROUP BY
   author,
   subreddit"""
+
+
+      
+def cleanDF(df):
+    defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
+LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+WritingPrompts+\
+announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
+gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
+personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
+todayilearned+videos+worldnews""".split('+')
+    defaults.append('politics')
+    
+    clean = df.astype({'author':str,'subreddit':str,'num_comments':int})
+    return clean[(~clean['subreddit'].isin(defaults)) &
+                (~clean['author'].isin(['[deleted]','AutoModerator'])) &
+                (~clean['subreddit'].str.startswith('u_'))
+                ]
