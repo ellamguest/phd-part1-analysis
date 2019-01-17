@@ -227,6 +227,18 @@ def variableTrends(d):
 
         trend.T.plot(title=variable)
 
+def pcaTrends(d, num_components=3):
+    dates = getDates()
+    results={}
+    for i in range(num_components):
+        v = [d[date]['Y'][i] for date in dates]
+        trend = pd.concat(v, axis=1)
+        trend.columns = dates
+
+        results[i]=trend
+
+    return results
+
 def singleMonth(date):
         df = loadStats(date, num_subreddits)
         df.index.name = 'subreddit_id'
@@ -235,3 +247,26 @@ def singleMonth(date):
         main = mainVariables(df)
         U, explained, Y = pca(main, n_components=3)
         subset = getSubs(df)
+
+def subTrend(d, subreddit):
+    dates = getDates()
+
+    results = {}
+    for date in dates:
+        results[date]=d[date]['df'].select_dtypes('number').loc[subreddit]
+    return pd.DataFrame(results)
+
+
+def zscore(x):
+    keep = x.dropna()
+    z= stats.zscore(keep)
+
+    return pd.DataFrame(z, index=keep.index, columns=keep.columns)
+
+def IQR(x):
+    Q1 = boston_df_o1.quantile(0.25)
+    Q3 = boston_df_o1.quantile(0.75)
+    IQR = Q3 - Q1
+    print(IQR)
+
+    print(boston_df_o1 < (Q1 - 1.5 * IQR)) |(boston_df_o1 > (Q3 + 1.5 * IQR))

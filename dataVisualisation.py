@@ -89,6 +89,7 @@ def correlationClustermap(df, date, save=False, metric='cosine'):
 
     # Set up the matplotlib figure
     #f, ax = plt.subplots(figsize=(11, 9))
+    
 
     # Generate a custom diverging colormap
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
