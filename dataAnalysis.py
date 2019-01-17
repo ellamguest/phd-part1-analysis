@@ -98,8 +98,8 @@ def andy(main):
         y = Y.loc[p]
         plt.annotate(p, (y[0], y[1]))
         
-def sizeControlled(df, size_variable='num_auts'):
-    X = df.copy()
+def sizeControlled(df, size_variable='author_count'):
+    X = df.copy().select_dtypes('number')
     
     x = X[size_variable]
     ys = X
@@ -108,7 +108,7 @@ def sizeControlled(df, size_variable='num_auts'):
     
     e = X - Xhat
     
-    ranks = e.rank().pipe(lambda df: df/len(df))
+    ranks = e.rank().pipe(lambda df: X/len(X))
 
     return ranks
 
@@ -133,20 +133,35 @@ def pca(df, n_components=3):
 def pcaPlot(U, date=None, save=False):
     fig, axes = plt.subplots(nrows=3, ncols=1)
     for i in U.index:
-        U.loc[i].plot(kind='barh', title=f"""PCA cluster {i}""", ax=axes[i], figsize=(8,12))
+        U.loc[i].plot(kind='barh', title=f"""PCA component {i}""", ax=axes[i], figsize=(8,12))
     fig.suptitle(date, fontsize=14)
     plt.tight_layout()
     plt.subplots_adjust(top=0.9)
     if save:
         plt.savefig(figurePath(f"""{date}/PCA_components.png"""))
     
-def compareSubs(df):
+def getSubs(df):
     subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
     return df.loc[subs]
 
-def loadStats(date, num_subreddits):
+def compareSubs():
+    dates = getDates()
+
+    d = {}
+    for date in dates:
+        df = loadStats(date)
+        subset = getSubs(df)
+        d[date] = getDict(subset.fillna(0))
+
+    return d
+
+def loadStats(date, num_subreddits=500):
     if outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv""").is_file():
-        return pd.read_csv(outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv"""), index_col=0)
+        df = pd.read_csv(outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv"""), index_col=0)
+        df.index.name = 'subreddit_id'
+        df = df.set_index('subreddit',drop=False)
+
+        return df
     else:
         print("data not found")
 
@@ -154,55 +169,44 @@ getDates = lambda: sorted(next(os.walk("cache"))[1])
 
 def getDict(df):
         main = mainVariables(df)
-        U, explained, Y = pca(main.drop('subreddit', axis=1), n_components=3)
-        subset = compareSubs(df)
+        U, explained, Y = pca(main, n_components=3)
 
-        d[date] = {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
+        return {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
 
 def loadMonths(num_subreddits=500):
     dates = getDates()
-    d ={}
+    results = {}
     for date in dates:
         df = loadStats(date, num_subreddits)
-        df.index.name = 'subreddit_id'
-        df = df.set_index('subreddit',drop=False)
-        main = mainVariables(df)
-        U, explained, Y = pca(main.drop('subreddit', axis=1), n_components=3)
-        subset = compareSubs(df)
+        d = getDict(df)
 
-        d[date] = {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
+        results[date] = d
 
-    return d
+    return results
 
-def separateDefaults(num_subreddits=500):
+def separateDefaults(df):
     defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
 LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+WritingPrompts+\
 announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
 gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
 personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
 todayilearned+videos+worldnews""".split('+')
-    dates = getDates()
     df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
 
-        d ={}
-    for date in dates:
-        df = loadStats(date, num_subreddits)
-        df.index.name = 'subreddit_id'
-        df = df.set_index('subreddit',drop=False)
+    default = df[df.index.isin(defaults)]
+    nondefault = df[~df.index.isin(defaults)]
 
-        default = df[df.index.isin(defaults)]
-        nondefault = df[~df.index.isin(defaults)]
+    return default, nondefault
 
-        main = mainVariables(df)
-        U, explained, Y = pca(main.drop('subreddit', axis=1), n_components=3)
-        subset = compareSubs(df)
+def compareDefaults(df):
+    default, nondefault = separateDefaults(df)
+    dd = getDict(default)
+    nd = getDict(nondefault)
 
-        d[date] = {'df':df, 'main':main, 'U':U, 'explained':explained, 'Y':Y}
+    return dd, nd
 
 
-
-def compareExplained():
-    d = loadMonths()
+def compareExplained(d):
     dates = getDates()
     e = [d[date]['explained'] for date in dates]
 
@@ -211,8 +215,7 @@ def compareExplained():
 
     trend.T.plot(title='explained')
 
-def variableTrends():
-    d = loadMonths()
+def variableTrends(d):
     dates = getDates()
 
     variables = d[dates[0]]['U'].columns
@@ -223,3 +226,12 @@ def variableTrends():
         trend.columns = dates
 
         trend.T.plot(title=variable)
+
+def singleMonth(date):
+        df = loadStats(date, num_subreddits)
+        df.index.name = 'subreddit_id'
+        df = df.set_index('subreddit',drop=False)
+        df['gini'] = 1-df['gini']
+        main = mainVariables(df)
+        U, explained, Y = pca(main, n_components=3)
+        subset = getSubs(df)
