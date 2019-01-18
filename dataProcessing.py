@@ -218,6 +218,7 @@ def loadDF(date):
         return getIds(date)
 
 def freshData(date):
+    createDirectories(date)
     print(f"""getting and storing blob for {date}""")
     blob = fetchBlob(date)
     storeBlob(blob, date)

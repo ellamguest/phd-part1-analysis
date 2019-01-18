@@ -263,10 +263,33 @@ def zscore(x):
 
     return pd.DataFrame(z, index=keep.index, columns=keep.columns)
 
-def IQR(x):
-    Q1 = boston_df_o1.quantile(0.25)
-    Q3 = boston_df_o1.quantile(0.75)
-    IQR = Q3 - Q1
-    print(IQR)
+def variableTimeSeries():
+    dates = getDates()
+    months = {}
+    for date in dates:
+        months[date]=loadStats(date, num_subreddits)
+    return pd.concat(months.values(), keys=months.keys())
 
-    print(boston_df_o1 < (Q1 - 1.5 * IQR)) |(boston_df_o1 > (Q3 + 1.5 * IQR))
+
+def countsOnly():
+    author = pd.read_csv(cachePath('authorCounts.csv'), index_col=0)
+    comments = pd.read_csv(cachePath('commentCounts.csv'), index_col=0)
+
+    return acounts, ccounts
+
+def top():
+    a = pd.read_csv(cachePath('authorCounts.csv'), index_col=0).fillna(0)
+    mins = a.min(axis=1)
+    large = mins[mins>=100].index
+    subset = a.loc[large]
+    subset = subset.drop('2015-11', axis=1)
+
+from statsmodels.tsa.seasonal import seasonal_decompose
+
+def decomposeTime(series):
+    series = subset.median()
+    series.index = series.index.map(lambda x: datetime.strptime(x, '%Y-%m'))
+    result = seasonal_decompose(series, model='additive')
+    result.trend.plot(title='trend')
+    result.seasonal.plot(title='seasonal')
+
