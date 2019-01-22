@@ -115,3 +115,4 @@ venv.bak/
 /output
 
 service_account.json
+credentials.py

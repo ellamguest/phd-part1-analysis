@@ -8,6 +8,7 @@ from scipy import stats
 import scipy as sp
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
+from tools import cachePath
 
 
 def mainVariables(df):
@@ -177,10 +178,10 @@ def loadMonths(num_subreddits=500):
     dates = getDates()
     results = {}
     for date in dates:
-        df = loadStats(date, num_subreddits)
-        d = getDict(df)
+        if outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv""").is_file():
+           df = loadStats(date, num_subreddits)
 
-        results[date] = d
+           results[date] = df
 
     return results
 
@@ -275,7 +276,7 @@ def countsOnly():
     author = pd.read_csv(cachePath('authorCounts.csv'), index_col=0)
     comments = pd.read_csv(cachePath('commentCounts.csv'), index_col=0)
 
-    return acounts, ccounts
+    return author, comments
 
 def top():
     a = pd.read_csv(cachePath('authorCounts.csv'), index_col=0).fillna(0)
@@ -287,9 +288,9 @@ def top():
 from statsmodels.tsa.seasonal import seasonal_decompose
 
 def decomposeTime(series):
-    series = subset.median()
     series.index = series.index.map(lambda x: datetime.strptime(x, '%Y-%m'))
     result = seasonal_decompose(series, model='additive')
     result.trend.plot(title='trend')
+    plt.plot()
     result.seasonal.plot(title='seasonal')
 
