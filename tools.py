@@ -2,9 +2,9 @@ from pathlib import Path
 import time
 import datetime
 import numpy as np
+import os
 
 """ TOOLS """
-getDate = lambda year, month: f"""{year}-{month}"""
 cachePath = lambda filename: Path(f"""cache/{filename}""")
 figurePath = lambda filename: Path(f"""figures/{filename}""")
 outputPath = lambda filename: Path(f"""output/{filename}""")
@@ -18,57 +18,19 @@ def createDirectories(date):
 
 elapsed = lambda start, end: print(f"""{(end-start)/60} minutes elapsed""") 
 
+getDates = lambda: sorted(next(os.walk("cache"))[1])
 
+def getSubs(df):
+    subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
+    return df.loc[subs]
 
-
-
-def segmentMonths(year):
-    months = list(range(1,13))
-    starts = [datetime.datetime(year,month,1,0,0,0) for month in months]
-    
-    following = starts[1:]+[(datetime.datetime(year+1,1,1,0,0,0))]
-    delta = datetime.timedelta(seconds=1)
-    
-    ends = [date - delta for date in following]
-    
-    starts = [time.mktime(x.timetuple()) for x in starts]
-    ends= [time.mktime(x.timetuple()) for x in ends]
-    
-    return list(zip(starts, ends))
-    
-
-def query(year, month):
-    pairs = segmentMonths(year)
-    
-    start = time.mktime(datetime.datetime(year,month,1,0,0,0).timetuple())
-    if month==12:
-        end = time.mktime(datetime.datetime(year+1,1,month,0,0,0).timetuple()) - 1
-    else:
-        end = time.mktime(datetime.datetime(year,month+1,1,0,0,0).timetuple())
-        
-    return f"""
-SELECT author, subreddit,
-  COUNT(link_id) AS num_comments
-FROM
-  [fh-bigquery:reddit_comments:{year}]
-WHERE (created_utc >= {np.int(start)}) & (created_utc <= {np.int(end)})
-GROUP BY
-  author,
-  subreddit"""
-
-
-      
-def cleanDF(df):
+def addDefaults(df):
     defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
 LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+WritingPrompts+\
 announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
 gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
 personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
 todayilearned+videos+worldnews""".split('+')
-    defaults.append('politics')
-    
-    clean = df.astype({'author':str,'subreddit':str,'num_comments':int})
-    return clean[(~clean['subreddit'].isin(defaults)) &
-                (~clean['author'].isin(['[deleted]','AutoModerator'])) &
-                (~clean['subreddit'].str.startswith('u_'))
-                ]
+    df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
+
+    return df

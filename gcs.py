@@ -3,7 +3,7 @@
 
 from pathlib import Path
 from aws import s3
-from tools import cachePath, outputPath, getDate, createDirectories
+from tools import cachePath, outputPath, createDirectories
 import pandas as pd
 from google.cloud import bigquery
 from google.cloud import storage
@@ -97,11 +97,10 @@ def jobConfig():
 
     return config
 
-def fetchQuery(query, year, month, cache=False):
+def fetchQuery(query, date, cache=False):
     j = bigquery_client().query(query=query, job_config=jobConfig())
     df = j.to_dataframe() # do i need to be keeping as dataframe?
     if cache:
-        date = getDate(year, month)
         df.to_csv(cachePath(f"""{date}/author-subreddit-counts.csv"""))
 
     return df

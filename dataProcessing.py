@@ -79,7 +79,11 @@ def authorStats(values):
                 'aut_com_blau': blau(values)}
 
 def getSubredditStats(df, date):
-    print("getting aggregate level subreddit stats")
+    """Computes statistics for each author in the dataset
+    variables = ['author_count',comment_count','entropy','gini','blau']
+    """
+
+    print("getting subreddit level stats")
     incidence = CSR(df, 'subreddit_id', 'author_id', 'num_comments')
 
     with parallel(subStats) as g:
@@ -93,8 +97,9 @@ def getSubredditStats(df, date):
     output.to_csv(outputPath(f"""{date}/subredditLevelStats.csv"""))
 
 def getAuthorStats(df, date):
-    """slicing the csr is still the least efficient part of data processing
-    NEEDS TO REPLACE TQDM WITH PARALLEL BUT CRASHING???
+    """Computes statistics for each author in the dataset
+    variables = ['aut_sub_count', 'aut_com_count', 'aut_com_entropy', 'aut_com_gini',
+       'aut_com_blau', 'aut_insub']
     """
     print("getting author stats") # LONGEST PART, STILL TAKES A FEW MINUTES
     df = df.sort_values(['author_id','subreddit_id'])
@@ -159,6 +164,7 @@ def getAggAuthorStats(date):
     output.to_csv(outputPath(f"""{date}/authorLevelStats.csv"""))
 
 def filenames(date):
+    """Generates filenames to check if files exist"""
     subFile = outputPath(f"""{date}/subredditLevelStats.csv""")
     autFile = cachePath(f"""{date}/authorStats.gzip""")
     autAggFile = outputPath(f"""{date}/authorLevelStats.csv""")
@@ -221,10 +227,19 @@ def freshData(date):
 
     return getIds(date)
 
-def getSubset(df, num_subreddits):
-    authors = df[df['subreddit_id']<num_subreddits]['author'].unique()
+def combineOutput(date):
+    """
+    Combines subredditLevelStats and authorLevelStats for data to store fullStats.csv
+    """
+    subreddit = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
+    author = pd.read_csv(outputPath(f"""{date}/authorLevelStats.csv"""), index_col=0)
+    print("combining final subreddit level stats")
+    output = pd.merge(subreddit, author, on='subreddit')
+    output.to_csv(outputPath(f"""{date}/fullStats.csv"""))
 
-    return df[df['author'].isin(authors)]
+    print(f"""FINISHED WITH {date}""")
+    print()
+    print()
 
 def runStats(date):
     """
@@ -232,44 +247,25 @@ def runStats(date):
     CHECKS THAT EACH EXIST: subreddit level stats, author level stats, author aggregate stats
     COMPILES subreddit level stats AND author aggregate stats INTO full stats
     """
-    start = time.time()
-
     if cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""").is_file():
         print("opening df with ids")
-        data = pd.read_csv(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip"""),compression='gzip', index_col=0)
+        df = pd.read_csv(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip"""),compression='gzip', index_col=0)
     else:
-        data = freshData(date)
+        print("need to access file from GCS")
 
-    data = data[data['author']!='[deleted]']
+    df = df[df['author']!='[deleted]']
 
     subFile, autFile, autAggFile = filenames(date)
-    if subFile.is_file():
-        print("opening subreddit level stats")
-        subredditLevel = pd.read_csv(subFile, index_col=0)
-    else:
-        subredditLevel = getSubredditStats(df, date)
 
-    if autAggFile.is_file():
-        print("opening author agg stats")
-        authorAgg = pd.read_csv(autAggFile, index_col=0)
-    else:    
-        if autFile.is_file():
-            print("already cached author stats")
-            authorAgg = getAggAuthorStats(date)
-            
-        else:
-            getAuthorStats(df, date,)
-            authorAgg = getAggAuthorStats(date)
-    
-    print("combining final subreddit level stats")
-    output = pd.merge(subredditLevel, authorAgg, on='subreddit')
-    output.to_csv(outputPath(f"""{date}/fullStats.csv"""))
+    if subFile.is_file() is False:
+        getSubredditStats(df, date)
 
-    end = time.time()
-    elapsed(start, end)
-    print(f"""FINISHED WITH {date}""")
-    print()
-    print()
+    if autAggFile.is_file() is False:
+        if autFile.is_file() is False:
+            getAuthorStats(df, date)
+        getAggAuthorStats(date)
+
+    combineOutput(date)
 
 def checkDone(date):
     if outputPath(f"""{date}/fullStats.csv""").is_file():
@@ -278,7 +274,7 @@ def checkDone(date):
     else:
         runStats(date)
 
-def months():
+def runMonths():
     dates = sorted(next(os.walk("cache"))[1])
     for date in dates:
         checkDone(date)
