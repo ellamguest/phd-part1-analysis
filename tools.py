@@ -20,8 +20,8 @@ elapsed = lambda start, end: print(f"""{(end-start)/60} minutes elapsed""")
 
 getDates = lambda: sorted(next(os.walk("cache"))[1])
 
-def getSubs(df):
-    subs = ['The_Donald', 'Libertarian','Conservative','changemyview','socialism','SandersForPresident','LateStageCapitalism']
+def getSubset(df):
+    subs = ['The_Donald', 'Libertarian','Conservative', 'politics', 'changemyview','socialism','SandersForPresident','LateStageCapitalism']
     return df.loc[subs]
 
 def addDefaults(df):

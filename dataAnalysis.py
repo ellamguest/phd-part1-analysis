@@ -21,11 +21,11 @@ def loadStats(date):
         print("data not found")
 
 
-def loadMonths(num_subreddits=500):
+def loadMonths():
     dates = getDates()
     results = {}
     for date in dates:
-        if outputPath(f"""{date}/top_{num_subreddits}_fullStats.csv""").is_file():
+        if outputPath(f"""{date}/fullStats.csv""").is_file():
            df = loadStats(date, num_subreddits)
 
            results[date] = df

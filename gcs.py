@@ -28,7 +28,6 @@ def readIDs(date):
     with fs.open(f"""emg-author-subreddit-pairs-ids/{date}.gzip""") as f:
         return pd.read_csv(f, compression="gzip")
 
-
 def writeBlob(date):
     bucket = storage_client().get_bucket('emg-author-subreddit-pairs')
     blob = bucket.blob(f"""{date}-IDS.gzip""")
