@@ -7,7 +7,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from tools import *
 from google.cloud import storage
-from gcs import fetchBlob, storeBlob, readBlob
+from gcs import *
 from tqdm import tqdm
 from andyTools import parallel
 import os
@@ -101,8 +101,8 @@ def getAuthorStats(df, date):
     variables = ['aut_sub_count', 'aut_com_count', 'aut_com_entropy', 'aut_com_gini',
        'aut_com_blau', 'aut_insub']
     """
-    print("getting author stats") # LONGEST PART, STILL TAKES A FEW MINUTES
-    df = df.sort_values(['author_id','subreddit_id'])
+    print("getting author stats")
+    #df = df.sort_values(['author_id','subreddit_id'])
     incidence = CSR(df, 'author_id', 'subreddit_id', 'num_comments')
     
     results = {}
@@ -121,6 +121,8 @@ def getAuthorStats(df, date):
 
     result.to_csv(cachePath(f"""{date}/authorStats.gzip"""),compression='gzip')
 
+    return result
+
 def aggStats(values):
     lower, median, upper = np.percentile(values, [25,50,75])
     return {
@@ -133,14 +135,12 @@ def aggStats(values):
                     '75%':upper
                     }
 
-def getAggAuthorStats(date):
+def getAggAuthorStats(df, date):
     """
     TAKES THE AUTHOR LEVEL STATS PRODUCED BY getAuthorStats
     AND GETS SUBREDDIT LEVEL AGGREGATE AUTHOR STATS
     """
     print("getting aggregate level author stats")
-
-    df = pd.read_csv(cachePath(f"""{date}/authorStats.gzip"""),compression='gzip')
     
     variables = ['aut_sub_count', 'aut_com_count', 'aut_com_entropy', 'aut_com_gini',
        'aut_com_blau', 'aut_insub']
@@ -263,6 +263,7 @@ def runStats(date):
     if autAggFile.is_file() is False:
         if autFile.is_file() is False:
             getAuthorStats(df, date)
+        df = pd.read_csv(cachePath(f"""{date}/authorStats.gzip"""),compression='gzip')
         getAggAuthorStats(date)
 
     combineOutput(date)
