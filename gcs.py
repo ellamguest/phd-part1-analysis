@@ -37,6 +37,6 @@ def checkUploaded(bucket_name, file_name):
 
     dates = getDates()
     run = []
-     set(dates) - set(uploaded) - set(run)
+    set(dates) - set(uploaded) - set(run)
 
 

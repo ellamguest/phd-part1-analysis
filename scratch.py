@@ -1,21 +1,59 @@
 from gcs import *
 from tools import *
+import matplotlib.pyplot as plt
+
+def getData():
+    dates = getDates()
+    data = {}
+    for date in dates:
+        if outputPath(f"""{date}/authorLevelStats.csv""").is_file():
+            print(date)
+            a = pd.read_csv(outputPath(f"""{date}/authorLevelStats.csv"""), index_col=0)
+            s = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
+
+            df = a.merge(s, on='subreddit').set_index('subreddit')
+            data[date] = df
+
+    return data
+
+def timeline(data, variable):
+    a = {}
+    for k, v in data.items():
+        a[k] = v[variable]
+
+    return pd.DataFrame(a)
+
+def plot(timeline, variable, pct=True, save=False):
+    df = timeline.copy()
+    
+    ylabel = variable
+    if pct:
+        df = df.rank(pct=True)
+        ylabel = f"""{variable} percentile"""
+
+    subset = getSubset(df)
+    plt.figure(figsize=(12,9))
+    plt.plot(subset.T)
+    plt.legend(subset.index)
+    plt.xticks(rotation='vertical')
+    plt.xlabel('month')
 
 
+    plt.ylabel(ylabel)
+
+    if save:
+        plt.savefig(figurePath(f"""{ylabel}.pdf"""))
+
+    plt.show()
 
 
-uploaded = bucketDates("emg-author-stats")
-dates = getDates()
-toRun = [date for date in  dates if date not in uploaded]
+def run():
+    data = getData()
+    variable = 'aut_insub_median'
 
-for date in uploaded:
-    if cachePath(f"""{date}/authorLevelStats.csv""").is_file():
-        print(date, "DONE!")
-    else:
-        print(date)
-        df = streamBlob('emg-author-stats', date)
-        getAggAuthorStats(df, date)
+    t = timeline(date, variable)
 
+    plot(t, variable)
 
-
-
+    date = '2017-12'
+    df = dfs[date]
