@@ -4,8 +4,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from bokeh.plotting import figure, output_notebook, show, ColumnDataSource
-from bokeh.models import NumeralTickFormatter
 import seaborn as sns
 from pathlib import Path
 from tools import figurePath
@@ -101,34 +99,4 @@ def correlationClustermap(df, date, save=False, metric='cosine'):
     if save:
         plt.savefig(figurePath('{}-corr-clustermap.pdf'.format(date)))
         
-        
-"""PLOTTING"""
-output_notebook(hide_banner=True)
-
-def scatterplot(df, x, y):
-    source = ColumnDataSource(data=dict(
-        x=df[x],
-        y=df[y],
-        subreddit=df.index,
-        default = df['default'],
-        col = df['default'].map({True:'red',False:'blue'})
-    ))
-
-    TOOLTIPS = [
-        ("subreddit", "@subreddit"),
-        (x, "@x"),
-        (y, "@y"),
-        ("default", "@default")
-    ]
-
-    p = figure(plot_width=400, plot_height=400, tooltips=TOOLTIPS)
-
-    p.circle('x', 'y', size=5, source=source, color='col')
-
-    p.xaxis.axis_label = x
-    p.yaxis.axis_label = y
-
-    p.xaxis[0].formatter = NumeralTickFormatter(format="0")
-    p.yaxis[0].formatter = NumeralTickFormatter(format="0")
-
-    show(p)
+    
