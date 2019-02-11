@@ -36,7 +36,7 @@ def gini(values):
     sum_y = sum(v)
     n = len(v)
 
-    return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
+    return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n) #invert for clearer interpretation?
 
 def blau(values):
     pi = values/np.sum(values)
@@ -71,14 +71,7 @@ def subStats(values):
                        'gini': gini(values),
                        'blau': blau(values)}
 
-def authorStats(values):
-    return {'aut_sub_count':np.count_nonzero(values),
-        'aut_com_count':np.sum(values),
-        'aut_com_entropy': stats.entropy(values),
-                'aut_com_gini': gini(values),
-                'aut_com_blau': blau(values)}
-
-def getSubredditStats(df, date):
+def runSubredditStats(df, date):
     """Computes statistics for each author in the dataset
     variables = ['author_count',comment_count','entropy','gini','blau']
     """
@@ -96,7 +89,7 @@ def getSubredditStats(df, date):
 
     output.to_csv(outputPath(f"""{date}/subredditLevelStats.csv"""))
 
-def getAuthorStats(df, date):
+def runAuthorStats(df, date):
     """Computes statistics for each author in the dataset
     variables = ['aut_sub_count', 'aut_com_count', 'aut_com_entropy', 'aut_com_gini',
        'aut_com_blau', 'aut_insub']
@@ -106,7 +99,7 @@ def getAuthorStats(df, date):
     incidence = CSR(df, 'author_id', 'subreddit_id', 'num_comments')
     
     results = {}
-    for i in tqdm(df['author_id'].unique()):
+    for i in tqdm(df['author_id'].unique()): #parralel-ise?
         values = incidence[i,:].data
         results[i] = {'aut_sub_count':np.count_nonzero(values),
                'aut_com_count':np.sum(values),
@@ -135,7 +128,7 @@ def aggStats(values):
                     '75%':upper
                     }
 
-def getAggAuthorStats(df, date):
+def runAggAuthorStats(df, date):
     """
     TAKES THE AUTHOR LEVEL STATS PRODUCED BY getAuthorStats
     AND GETS SUBREDDIT LEVEL AGGREGATE AUTHOR STATS
@@ -146,7 +139,7 @@ def getAggAuthorStats(df, date):
        'aut_com_blau', 'aut_insub']
     
     stats = []
-    for variable in variables: #parallel here?
+    for variable in variables:
         incidence = CSR(df, 'subreddit_id', 'author_id', variable)
 
         with parallel(aggStats) as g:
@@ -163,24 +156,20 @@ def getAggAuthorStats(df, date):
 
     output.to_csv(outputPath(f"""{date}/authorLevelStats.csv"""))
 
-def filenames(date):
-    """Generates filenames to check if files exist"""
-    subFile = outputPath(f"""{date}/subredditLevelStats.csv""")
-    autFile = cachePath(f"""{date}/authorStats.gzip""")
-    autAggFile = outputPath(f"""{date}/authorLevelStats.csv""")
-
-    return subFile, autFile, autAggFile
-
 def sortedIds(series):
     order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
     return dict(zip(order['index'], order['level_0']))
 
-def getIds(date, cache=True):
+def runIDS(date):
     """
-    ADDS SUBREDDIT AND AUTHORS IDS RANKED BY TOTAL NUMBER OF COMMENTS
+    depends on a blob for that date existing in the bucket GCS bucket emg-author-subreddit-pairs,
+    with columns author, subreddit, num_comments
     """
-    df = readBlob(date)
-    df = df.astype({'author':str,'subreddit':str,'num_comments':int})
+    createDirectories(date)
+    input_bucket = 'emg-author-subreddit-pairs'
+    output_bucket = 'emg-author-subreddit-pairs-ids'
+    df = streamBlob(input_bucket, date)
+    df = df.reset_index().astype({'author':str,'subreddit':str,'num_comments':int})
 
     print("getting subreddit ids")
     subIds = sortedIds(df['subreddit'])
@@ -191,84 +180,30 @@ def getIds(date, cache=True):
     df['author_id']=df['author'].map(lambda x: authorIds[x])
 
     print("storing dataset w/ ids")
+
+    filename = cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""")
     df.to_csv(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip"""),compression='gzip')
 
-    print("deleting dateset w/o ids")
-    os.remove(cachePath(f"""{date}/author-subreddit-pairs.gzip"""))
-    
-    return df
+    uploadCommands(filename, output_bucket, date)
 
-def loadDF(date):
-    """
-    CHECKS IF DATASET W/ IDS EXISTS
-    IF NOT FETCHES DATA FROM GBQ OR LOCAL
-    THEN STORES COPY WITH IDS
-    """
-    print(date)
-    createDirectories(date)
-    
-    if cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""").is_file():
-        print("opening df with ids")
-        return pd.read_csv(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip"""),compression='gzip')
-    elif cachePath(f"""{date}/author-subreddit-pairs.gzip""").is_file():
-        print("opening df, need to get ids")
-        return getIds(date)
-    else:
-        print(f"""getting and storing blob for {date}""")
-        blob = fetchBlob(date)
-        storeBlob(blob, date)
-        return getIds(date)
-
-
-def combineOutput(date):
-    """
-    Combines subredditLevelStats and authorLevelStats for data to store fullStats.csv
-    """
-    subreddit = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
-    author = pd.read_csv(outputPath(f"""{date}/authorLevelStats.csv"""), index_col=0)
-    print("combining final subreddit level stats")
-    output = pd.merge(subreddit, author, on='subreddit')
-    output.to_csv(outputPath(f"""{date}/fullStats.csv"""))
-
-    print(f"""FINISHED WITH {date}""")
-    print()
-    print()
 
 def runStats(date):
     """
-    OPENS DATA, GETS drops deleted authors
-    CHECKS THAT EACH EXIST: subreddit level stats, author level stats, author aggregate stats
-    COMPILES subreddit level stats AND author aggregate stats INTO full stats
+    streams data with ids
+    runs subreddit stats, author stats and aggregate author stats
+    currently does not drop deleted!
     """
-    if cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""").is_file():
-        print("opening df with ids")
-        df = pd.read_csv(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip"""),compression='gzip', index_col=0)
-    else:
-        print("need to access file from GCS")
+    input_bucket = 'emg-author-subreddit-pairs-ids'
+    df = streamBlob(input_bucket, date)
+    
+    runSubredditStats(df, date)
 
-    df = df[df['author']!='[deleted]']
+    authorStats = runAuthorStats(df, date)
 
-    subFile, autFile, autAggFile = filenames(date)
+    runAggAuthorStats(authorStats, date)
 
-    if subFile.is_file() is False:
-        getSubredditStats(df, date)
 
-    if autAggFile.is_file() is False:
-        if autFile.is_file() is False:
-            getAuthorStats(df, date)
-        df = pd.read_csv(cachePath(f"""{date}/authorStats.gzip"""),compression='gzip')
-        getAggAuthorStats(date)
+def run(date):
+    runIDS(date)
+    runStats(date)
 
-    combineOutput(date)
-
-def checkDone(date):
-    if outputPath(f"""{date}/fullStats.csv""").is_file():
-        print(f"""{date} already completed!""")
-        print()
-    else:
-        runStats(date)
-
-def runMonths():
-    dates = sorted(next(os.walk("cache"))[1])
-    for date in dates:
-        checkDone(date)

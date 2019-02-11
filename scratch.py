@@ -3,65 +3,31 @@ from tools import *
 import matplotlib.pyplot as plt
 
 
-def run():
-    df = streamBlob('emg-author-stats', date)
-    result = getAuthorStats(df, date)
-    getAggAuthorStats(df, date)
+def uploadCommands(filename, bucket_name, date):
+    with open('uploadCommands.sh', 'a') as f:
+        command = f"""gsutil cp {filename} gs://{bucket_name}/{date}.gzip"""
+        f.write("%s\n" % command)
 
-def getData():
-    dates = getDates()
-    data = {}
-    for date in dates:
-        if outputPath(f"""{date}/authorLevelStats.csv""").is_file():
-            a = pd.read_csv(outputPath(f"""{date}/authorLevelStats.csv"""), index_col=0)
-            s = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
+def runIDS(date):
+    createDirectories(date)
+    input_bucket = 'emg-author-subreddit-pairs'
+    output_bucket = 'emg-author-subreddit-pairs-ids'
+    df = streamBlob(input_bucket, date)
+    df = df.reset_index().astype({'author':str,'subreddit':str,'num_comments':int})
 
-            df = a.merge(s, on='subreddit').set_index('subreddit')
-            data[date] = df
+    print("getting subreddit ids")
+    subIds = sortedIds(df['subreddit'])
+    df['subreddit_id'] = df['subreddit'].map(lambda x: subIds[x])
 
-    return data
+    print("getting author ids")
+    authorIds = sortedIds(df['author'])
+    df['author_id']=df['author'].map(lambda x: authorIds[x])
 
-def timeline(data, variable):
-    a = {}
-    for k, v in data.items():
-        a[k] = v[variable]
+    print("storing dataset w/ ids")
 
-    return pd.DataFrame(a)  
+    filename = cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""")
+    df.to_csv(cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip"""),compression='gzip')
 
-def plot(timeline, variable, pct=True, save=False, rolling=True):
-    df = timeline.copy()
-    
-    ylabel = variable
-    if pct:
-        df = df.rank(pct=True)
-        ylabel = f"""{variable} percentile"""
-
-    subset = getSubset(df).T
-    if rolling:
-        subset = subset.rolling(window=3).mean()
-
-    plt.figure(figsize=(12,9))
-    plt.plot(subset)
-    plt.legend(subset.columns)
-    plt.xticks(rotation='vertical')
-    plt.xlabel('month')
+    uploadCommands(filename, output_bucket, date)
 
 
-    plt.ylabel(ylabel)
-
-    if save:
-        plt.savefig(figurePath(f"""{ylabel}.pdf"""))
-
-    plt.show()
-
-
-def run():
-    data = getData()
-    variable = 'aut_insub_median'
-
-    t = timeline(date, variable)
-
-    plot(t, variable)
-
-    date = '2017-12'
-    df = dfs[date]
