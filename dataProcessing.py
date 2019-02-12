@@ -5,7 +5,7 @@ import time
 import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
-from tools import *
+from tools import createDirectories, cachePath, outputPath
 from google.cloud import storage
 from gcs import *
 from tqdm import tqdm
@@ -24,7 +24,10 @@ pip install google-cloud-storage
 
 """ DIVERSITY MEASURES """
 def gini(values):
-    "calculate the gini coefficient for a list of values"
+    """
+    calculate the gini coefficient for a list of values
+    a measure of equality, 0 = total equality, 1 = total inequality
+    """
     v = values.copy()
     v.sort()
 
@@ -195,6 +198,8 @@ def runStats(date):
     """
     input_bucket = 'emg-author-subreddit-pairs-ids'
     df = streamBlob(input_bucket, date)
+
+    df = df[df['author']!='[deleted]']
     
     runSubredditStats(df, date)
 

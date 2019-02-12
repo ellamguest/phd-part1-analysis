@@ -15,7 +15,6 @@ def createDirectories(date):
     Path(f"""figures/{date}""").mkdir(exist_ok=True, parents=True)
     Path(f"""output/{date}""").mkdir(exist_ok=True, parents=True)
 
-
 elapsed = lambda start, end: print(f"""{(end-start)/60} minutes elapsed""") 
 
 getDates = lambda: sorted(next(os.walk("cache"))[1])
