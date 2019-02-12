@@ -107,6 +107,9 @@ venv.bak/
 *.csv
 *.png
 *.pdf
+*.json
+*.csv
+*.gzip
 
 /cache
 /credentials
@@ -114,5 +117,5 @@ venv.bak/
 /figures
 /output
 
-service_account.json
+gcs_service_account.json
 credentials.py

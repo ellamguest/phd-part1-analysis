@@ -1,7 +1,7 @@
 import requests
 import time
 import json
-import credentials
+from scripts import credentials
 import pandas as pd
 
 username = credentials.login['username']

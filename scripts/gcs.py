@@ -7,7 +7,7 @@ import os
 
 
 """IMPORTING DATA FROM GOOGLE CLOUD STORAGE"""
-storage_client = lambda: storage.Client.from_service_account_json('service_account.json')
+storage_client = lambda: storage.Client.from_service_account_json('gcs_service_account.json')
 
 def fetchBlob(date):
     bucket = storage_client().get_bucket('emg-author-subreddit-pairs')
@@ -15,7 +15,7 @@ def fetchBlob(date):
 
 def streamBlob(bucket_name, date):
     print(f"""opening GCS blob {date} from bucket {bucket_name}""")
-    fs = gcsfs.GCSFileSystem(project='author-subreddit-counts',token='service_account.json')
+    fs = gcsfs.GCSFileSystem(project='author-subreddit-counts',token='gcs_service_account.json')
     with fs.open(f"""{bucket_name}/{date}.gzip""") as f:
         return pd.read_csv(f, compression="gzip", index_col = 0)
 

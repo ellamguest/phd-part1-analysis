@@ -1,10 +1,10 @@
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
-from tools import getDates, outputPath, figurePath, addDefaults, getSubset
+from scripts.tools import getDates, outputPath, figurePath, addDefaults, getSubset
 
 
-def updateData(level):
+def compileData(level):
 	"""
 	level is 'subredditLevel' or 'authorLevel'
 	"""
@@ -22,50 +22,64 @@ def updateData(level):
 	Path(f"""output/{level}""").mkdir(exist_ok=True, parents=True)
 	df.to_csv(outputPath(f"""{level}/fullDataset.gzip"""), compression='gzip')
 
-def updateRanks(level):
-    """
-    level is 'subredditLevel' or 'authorLevel'
-    """
-    df = pd.read_csv(outputPath(f"""{level}/fullDataset.gzip"""), compression='gzip', index_col=0)
-
-    rank = df.select_dtypes('number').copy()
-    for col in rank.columns:
-            print(col)
-            rank[col] = rank.groupby('date')[col].rank(pct=True)
+def compileRanks(level):
+	"""level is 'subredditLevel' or 'authorLevel'"""
+	df = pd.read_csv(outputPath(f"""{level}/fullDataset.gzip"""), compression='gzip', index_col=0)
+	rank = df.select_dtypes('number').copy()
+	for col in rank.columns:
+		print(col)
+		rank[col] = rank.groupby(df['date'])[col].rank(pct=True)
+		
 	rank['date'] = df['date']
 	rank['subreddit'] = df['subreddit']
 
 	rank.to_csv(outputPath(f"""{level}/ranks.gzip"""), compression='gzip')
 
+def topSubs(date):
+	df = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
+	df['cumsum'] = df['comment_count'].cumsum()/df['comment_count'].sum()
+	df = addDefaults(df)
+
+	defaultless = df[df['default']==False]
+	defaultless['cumsum'] = defaultless['comment_count'].cumsum()/defaultless['comment_count'].sum()
+	top = defaultless[(defaultless['comment_count']>=defaultless['comment_count'].quantile(0.9))]
+
+	print(f"""If we exclude defaults, there are {top.shape[0]} subreddits in the top decile by comment_count. Those still account for {top['cumsum'].iloc[-1]*100}% of comments on Reddit in {date}""")
+
+	defaultComments = df[df['default']==True]['comment_count'].sum()
+	totalComments = df['comment_count'].sum()
+
+	pctDefault = df[df['default']==True].shape[0]/df.shape[0] * 100
+
+	print(f"""In {date} only {pctDefault}% of subreddits were defaults but they accounted for {(defaultComments/totalComments)*100}% of all comments on Reddit""")
+
 def deciles(series):
         return series.quantile([0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1])
 
 def shadedDeciles(level):
-	df = pd.read_csv(outputPath(f"""{level}/fullDataset.csv"""), index_col=0)
+	df = pd.read_csv(outputPath(f"""{level}/fullDataset.gzip"""), compression='gzip', index_col=0)
 	d = df.select_dtypes('number').groupby(df['date']).apply(lambda x: deciles(x))
 	d.index.names = ['date','decile']
-	for v in d.columns:
+	columns = d.columns
+	if level == 'authorLevel':
+		columns = [col for col in columns if 'median' in col]
+	for v in columns:
 		b = d[v].unstack()
-		b = np.log(b).fillna(0).replace(np.inf, 0)
+
+		if 'count' in v:
+			b = np.log(b)
 
 		ymin, ymax = b[0].min(), b[1].max()
 		plt.ylim([ymin,ymax*1.01])
 		for n in reversed(b.columns):
 			plt.plot(b[n], color = 'blue', alpha=n, label=f"""{n*100}%""")
 		plt.xticks(rotation='70')
-		plt.title(f"""{v} (log) deciles over time""")
+		plt.title(f"""{v} deciles over time""")
 
 		plt.tight_layout()
-		plt.savefig(figurePath(f"""{level}/{v}/deciles-log.pdf"""))
+		plt.savefig(figurePath(f"""{level}/{v}/deciles.pdf"""))
 
 		plt.close()
-
-
-def decileCrossTabs():
-
-	test = df[df['date']=='2015-11']
-	q = test.select_dtypes('number').apply(lambda x: pd.qcut(x, 10, duplicates='drop', labels=False))
-	sns.jointplot(q['author_count'], q['comment_count'], kind="hex", color="k");
 
 
 def subsetting(df):
@@ -89,7 +103,7 @@ def trends():
 
         return x
 
-def timelines(x, v):
+def timelines(subset, v):
         Path(f"""figures/authorLevel/{v}/timeline""").mkdir(exist_ok=True, parents=True)
         x.groupby('subreddit')[v].plot(legend=True)
         plt.title(f"""{v} over time""")
@@ -105,11 +119,3 @@ def timelines(x, v):
 
         plt.close()
 
-
-def month(date):
-        sub = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0).set_index('subreddit')
-
-
-        getSubset(data[date]['rank'])
-
-        rank = sub.select_dtypes('number').rank(pct=True)
