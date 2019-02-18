@@ -29,7 +29,7 @@ LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+Wri
 announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
 gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
 personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
-todayilearned+videos+worldnews""".split('+')
+todayilearned+videos+worldnews+Fitness""".split('+')
     df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
 
     return df

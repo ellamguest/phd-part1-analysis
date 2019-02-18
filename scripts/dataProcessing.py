@@ -5,11 +5,11 @@ import time
 import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
-from tools import createDirectories, cachePath, outputPath
+from scripts.tools import createDirectories, cachePath, outputPath
 from google.cloud import storage
-from gcs import *
+from scripts.gcs import *
 from tqdm import tqdm
-from andyTools import parallel
+from scripts.andyTools import parallel
 import os
 from tqdm import tqdm
 import logging
@@ -40,6 +40,23 @@ def gini(values):
     n = len(v)
 
     return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n) #invert for clearer interpretation?
+
+def gini_rewritten(values):
+    """
+    For a population with values yi, i = 1 to n, that are indexed in non-decreasing
+    order (yi ≤ yi+1): 
+    """
+    v = values.copy()
+    v.sort()
+
+    n = len(v)
+
+    main = []
+    for i, y in enumerate(v):
+        i += 1
+        main.append((n+1-i)*y)
+
+    return (1/n)*(n+1-2*(sum(main)/sum(v)))
 
 def blau(values):
     pi = values/np.sum(values)
