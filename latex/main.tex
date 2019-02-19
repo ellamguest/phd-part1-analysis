@@ -11,7 +11,7 @@
 \usepackage{xcolor}
 \usepackage{caption}
 \usepackage{subcaption}
-\usepackage{rotating}
+\usepackage{amsmath}
 
 
 \begin{document}
@@ -197,32 +197,32 @@ max  &     684138.00 &       4.88e+06 &    11.48 &  0.98 &  1.00 \\
      \centering
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-author_count-log.pdf}
-         \caption{Log of Subreddit Author Count}
+         \includegraphics[width=\textwidth]{kde-author_count-log.pdf}
+         \caption{$\ln(\text{author\_count})$}
          \label{hist:author}
      \end{subfigure}
      \hfill
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-comment_count-log.pdf}
-         \caption{Log of Subreddit Comment Count}
+         \includegraphics[width=\textwidth]{kde-comment_count-log.pdf}
+         \caption{$\ln(\text{comment\_count})$}
          \label{hist:comment}
      \end{subfigure}
      \hfill
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-entropy_norm.pdf}
-         \caption{Subreddit Entropy (Normalised)}
+         \includegraphics[width=\textwidth]{kde-entropy_norm.pdf}
+         \caption{entropy (normalised)}
          \label{hist:entropy}
      \end{subfigure}
      \hfill
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-gini.pdf}
-         \caption{Subreddit Gini}
+         \includegraphics[width=\textwidth]{kde-gini.pdf}
+         \caption{gini}
          \label{hist:gini}
      \end{subfigure}
-        \caption{Histograms of Most Active Subreddits}
+        \caption{Distributions of Active Subreddit Statistics}
         \label{hists}
 \end{figure}
 
