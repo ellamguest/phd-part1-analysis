@@ -24,15 +24,15 @@ def histograms(df, date):
 	for v in df.select_dtypes('number').columns:
 		print(v)
 		data = df[v]
-		filename = latexPath(f"""hist-{v}.svg""")
+		filename = latexPath(f"""hist-{v}.png""")
 		if 'count' in v:
 			data = np.log(data)
-			filename = latexPath(f"""hist-{v}-log.svg""")
+			filename = latexPath(f"""hist-{v}-log.png""")
 		plt.hist(data, color='grey')
 		xmin, xmax = data.min(), data.max()
 		plt.xlim(xmin, xmax)
 		plt.tight_layout()
-		plt.savefig(filename)
+		plt.savefig(filename, bbox_inches='tight')
 		plt.close()
 
 		# smaller bins
