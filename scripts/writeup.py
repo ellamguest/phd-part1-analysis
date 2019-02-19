@@ -8,22 +8,11 @@ import seaborn as sns
 
 latexPath = lambda filename: Path(f"""latex/{filename}""")
 
-def table(df, caption=None, label=None):
-	subset = df.copy()[['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
-
-	print("\\begin{table}")
-	print("\centering")
-	print(subset.describe().drop('count').to_latex())
-	print(f"""\caption{{{caption}}}""")
-	print(f"""\label{{{label}}} """)
-	print("\end{table}")
-
 def tableFile(df, caption=None, label=None):
 	subset = df.copy()[['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
-
+	
 	header = "\\begin{table}\n\centering\n"
 	body = subset.describe().drop('count').to_latex()
-	
 	footer = f"""\caption{{{caption}}}\n\label{{{label}}}\n\end{{table}}"""
 
 	text = header + body + footer
@@ -94,7 +83,7 @@ def kde(df):
 def settings():
 	pd.set_option('display.float_format', lambda x: '%.3f' % x)
 	plt.style.use(['seaborn-paper'])
-	plt.rc('font', monospace='Computer Modern TypeWriter')
+	plt.rc('font', serif='Computer Modern Roman')
 	plt.rc('figure', figsize=(3,3))
 	plt.rc('font', size=20)
 
@@ -104,7 +93,6 @@ def plots(df):
 	kde(df)
 
 	# hist tiny bins OR kde larger bins
-	# hist y axis freq
 
 def loadData(date="2018-02"):
 	settings()
