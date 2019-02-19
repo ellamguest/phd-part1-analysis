@@ -107,7 +107,7 @@ Table \ref{table/all} shows that at least half of subreddits had 3 or fewer uniq
 \subsection{Default Subreddits}
 50 subreddits were at one time classified as a default. Any new redditor was automatically subscribed to the default subreddits. Reddit used default subreddits until May 2017, but those subreddits appear to still benefit in size from their former visibility.
 
-Figures \ref{hist:author} and  \ref{hist:comment} and well as Table \ref{subLevelDesc} show that authors and comments are very unevenly distributed on Reddit, with the majority of subreddits having fewer than 13 and 26 authors and comments. respectively in the February 2018.
+Figures \ref{hist/author} and  \ref{hist/comment} and well as Table \ref{table/all} show that authors and comments are very unevenly distributed on Reddit, with the majority of subreddits having fewer than 13 and 26 authors and comments. respectively in the February 2018.
 
 Of the 20 subreddits with more than 60,000 authors 14 are default subreddits. However, of the 16 subreddits with more than 500,000 comments only 7 are defaults. In order to run the analysis, I was to remove inactive subreddits from the sample. Given the substantial difference between the most highly active, subreddits on the top end, and the low upper quartile values, I decide to subset the top decile of subreddits by author count. The analysed subset therefore consists of 10,404 of the original 104,042 subreddits.
 
@@ -123,53 +123,22 @@ Table \ref{table/all} shows that at least half of subreddits had 3 or fewer uniq
 
 Either one or both of \textit{author count} and \textit{comment count} can be used as a proxy for subreddit activity. In the full dataset the counts have a very strong positive correlation (coef = 0.899). 
 
-As shown in table \ref{table:active}, the lower quartile for blau is 0.98. 90\% of the subsetted subreddits have a value of blau greater than or equal to 0.96.  This, blau does not appear to be an informative measure for active subreddits
+As shown in table \ref{table/active}, the lower quartile for blau is 0.98. 90\% of the subsetted subreddits have a value of blau greater than or equal to 0.96.  This, blau does not appear to be an informative measure for active subreddits
 
 
 
 % Tables
 
-\input{latex/tables.tex}
-
-\input{latex/ta
 
 
-\begin{table}
-\input{table:all.tex}
-\end{table}
+\input{latex/table/all.tex}
+\input{latex/table/defaults.tex}
+%\input{latex/table/active.tex}
 
 
 
 % Figures
-
-\begin{figure}
-     \centering
-     \begin{subfigure}[b]{0.49\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{kde-log10_author_count.pdf}
-         \label{hist:author}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.49\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{kde-log10_comment_count.pdf}
-         \label{hist:comment}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.49\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{kde-entropy_norm.pdf}
-         \label{hist:entropy}
-     \end{subfigure}
-     \hfill
-     \begin{subfigure}[b]{0.49\textwidth}
-         \centering
-         \includegraphics[width=\textwidth]{kde-gini.pdf}
-         \label{hist:gini}
-     \end{subfigure}
-        \caption{Distributions of Active Subreddit Statistics}
-        \label{hists}
-\end{figure}
+\input{latex/figures.tex}
 
 
 
