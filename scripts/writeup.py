@@ -18,14 +18,27 @@ def table(df, caption=None, label=None):
 	print(f"""\label{{{label}}} """)
 	print("\end{table}")
 
+def tableFile(df, caption=None, label=None):
+	subset = df.copy()[['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
+
+	header = "\\begin{table}\n\centering\n"
+	body = subset.describe().drop('count').to_latex()
+	
+	footer = f"""\caption{{{caption}}}\n\label{{{label}}}\n\end{{table}}"""
+
+	return header + body + footer
+
 def tables(data):
-	table(data['df'], caption="Descriptive Statistics for all Subreddits", label="table:all")
-	print()
-	print()
-	table(data['defaults'], caption="Descriptive Statistics for Default Subreddits", label="table:defaults")
-	print()
-	print()
-	table(data['subset'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table:active")
+	allTable = tableFile(data['df'], caption="Descriptive Statistics for all Subreddits", label="table:all")
+	defaultTable = tableFile(data['defaults'], caption="Descriptive Statistics for Default Subreddits", label="table:defaults")
+	subsetTable = tableFile(data['subset'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table:active")
+
+	with open(latexPath("tables.tex"), "w") as f:
+		f.write(allTable)
+		f.write('\n\n\n')
+		f.write(defaultTable)
+		f.write('\n\n\n')
+		f.write(subsetTable)
 
 def subsetDecile(df, variable='author_count'):
 	"""Subsetting Active Subreddits"""
