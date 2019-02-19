@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-from tools import figurePath
+from scripts.tools import figurePath
 
 def annotatedHist(df, variable, log=False):
     x = df[variable].sort_values()

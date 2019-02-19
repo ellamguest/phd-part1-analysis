@@ -33,3 +33,7 @@ todayilearned+videos+worldnews+Fitness""".split('+')
     df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
 
     return df
+
+
+def deciles(series):
+    return series.quantile([0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1])
