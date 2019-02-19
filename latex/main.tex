@@ -11,7 +11,8 @@
 \usepackage{xcolor}
 \usepackage{caption}
 \usepackage{subcaption}
-\usepackage{rotating}
+\usepackage{graphicx}
+\graphicspath{{latex/}}
 
 
 \begin{document}
@@ -197,28 +198,28 @@ max  &     684138.00 &       4.88e+06 &    11.48 &  0.98 &  1.00 \\
      \centering
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-author_count-log.pdf}
+         \includegraphics[width=\textwidth]{hist-author_count-log.svg}
          \caption{Log of Subreddit Author Count}
          \label{hist:author}
      \end{subfigure}
      \hfill
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-comment_count-log.pdf}
+         \includegraphics[width=\textwidth]{hist-comment_count-log.svg}
          \caption{Log of Subreddit Comment Count}
          \label{hist:comment}
      \end{subfigure}
      \hfill
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-entropy_norm.pdf}
+         \includegraphics[width=\textwidth]{hist-entropy_norm.svg}
          \caption{Subreddit Entropy (Normalised)}
          \label{hist:entropy}
      \end{subfigure}
      \hfill
      \begin{subfigure}[b]{0.49\textwidth}
          \centering
-         \includegraphics[width=\textwidth]{hist-gini.pdf}
+         \includegraphics[width=\textwidth]{hist-gini.svg}
          \caption{Subreddit Gini}
          \label{hist:gini}
      \end{subfigure}
