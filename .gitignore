@@ -106,7 +106,6 @@ venv.bak/
 *.html
 *.csv
 *.png
-*.pdf
 *.json
 *.csv
 *.gzip

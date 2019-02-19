@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd	
 import matplotlib.pyplot as plt
 from scripts.tools import addDefaults, figurePath, outputPath
+from pathlib import Path
 
 def table(df, caption=None, label=None):
 	print("\\begin{table}")
@@ -23,12 +24,13 @@ def histograms(df, date):
 	for v in df.select_dtypes('number').columns:
 		print(v)
 		data = df[v]
-		filename = figurePath(f"""{date}/hist-{v}.pdf""")
+		filename = latexPath(f"""hist-{v}.svg""")
 		if 'count' in v:
 			data = np.log(data)
-			filename = figurePath(f"""{date}/hist-{v}-log.pdf""")
+			filename = latexPath(f"""hist-{v}-log.svg""")
 		plt.hist(data, color='grey')
-		plt.xlim(0)
+		xmin, xmax = data.min(), data.max()
+		plt.xlim(xmin, xmax)
 		plt.tight_layout()
 		plt.savefig(filename)
 		plt.close()
@@ -43,8 +45,11 @@ def settings():
 	plt.rc('figure', figsize=(3,3))
 	plt.rc('font', size=20)
 
+latexPath = lambda filename: Path(f"""latex/{filename}""")
+
 def run():
-	settings()
+	Path(f"""latex""").mkdir(exist_ok=True, parents=True)
+	
 
 	date = "2018-02"
 	df = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
@@ -66,6 +71,7 @@ def run():
 	print()
 	table(subset, caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table:active")
 
+	settings()
 	histograms(subset, date)
 
 
