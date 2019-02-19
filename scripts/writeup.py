@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from scripts.tools import addDefaults, figurePath, outputPath
 from pathlib import Path
 
+latexPath = lambda filename: Path(f"""latex/{filename}""")
+
 def table(df, caption=None, label=None):
 	print("\\begin{table}")
 	print("\centering")
@@ -20,14 +22,14 @@ def subsetDecile(df, variable='author_count'):
 	
 	return copy.loc[:np.round(tenth)-1]
 
-def histograms(df, date):
+def histograms(df):
 	for v in df.select_dtypes('number').columns:
 		print(v)
 		data = df[v]
-		filename = latexPath(f"""hist-{v}.png""")
+		filename = latexPath(f"""hist-{v}.pdf""")
 		if 'count' in v:
 			data = np.log(data)
-			filename = latexPath(f"""hist-{v}-log.png""")
+			filename = latexPath(f"""hist-{v}-log.pdf""")
 		plt.hist(data, color='grey')
 		xmin, xmax = data.min(), data.max()
 		plt.xlim(xmin, xmax)
@@ -38,6 +40,21 @@ def histograms(df, date):
 		# smaller bins
 		# kernel density over log x axis
 
+def kde(df):
+	for v in df.select_dtypes('number').columns:
+		print(v)
+		data = df[v]
+		filename = latexPath(f"""kde-{v}.pdf""")
+		if 'count' in v:
+			data = np.log(data)
+			filename = latexPath(f"""kde-{v}-log.pdf""")
+		sns.kdeplot(data, shade=True, color='grey', legend=False)
+		xmin, xmax = data.min(), data.max()
+		plt.xlim(xmin, xmax)
+		plt.tight_layout()
+		plt.savefig(filename, bbox_inches='tight')
+		plt.close()
+
 def settings():
 	pd.set_option('precision', 2)
 	plt.style.use(['seaborn-paper'])
@@ -45,11 +62,13 @@ def settings():
 	plt.rc('figure', figsize=(3,3))
 	plt.rc('font', size=20)
 
-latexPath = lambda filename: Path(f"""latex/{filename}""")
+def plots(df):
+	settings()
+	histograms(df)
+	kde(df)
 
 def run():
 	Path(f"""latex""").mkdir(exist_ok=True, parents=True)
-	
 
 	date = "2018-02"
 	df = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
