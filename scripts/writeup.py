@@ -26,19 +26,16 @@ def tableFile(df, caption=None, label=None):
 	
 	footer = f"""\caption{{{caption}}}\n\label{{{label}}}\n\end{{table}}"""
 
-	return header + body + footer
+	text = header + body + footer
+
+	with open(latexPath(f"""{label}.tex"""), "w") as f:
+		f.write(text)
 
 def tables(data):
-	allTable = tableFile(data['df'], caption="Descriptive Statistics for all Subreddits", label="table:all")
-	defaultTable = tableFile(data['defaults'], caption="Descriptive Statistics for Default Subreddits", label="table:defaults")
-	subsetTable = tableFile(data['subset'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table:active")
-
-	with open(latexPath("tables.tex"), "w") as f:
-		f.write(allTable)
-		f.write('\n\n\n')
-		f.write(defaultTable)
-		f.write('\n\n\n')
-		f.write(subsetTable)
+	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
+	tableFile(data['df'], caption="Descriptive Statistics for all Subreddits", label="table/all")
+	tableFile(data['defaults'], caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
+	tableFile(data['subset'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
 
 def subsetDecile(df, variable='author_count'):
 	"""Subsetting Active Subreddits"""
@@ -48,10 +45,11 @@ def subsetDecile(df, variable='author_count'):
 	return copy.loc[:np.round(tenth)-1]
 
 def histograms(df):
+	Path(f"""latex/hist""").mkdir(exist_ok=True, parents=True)
 	for v in ['log10_author_count','log10_comment_count','entropy_norm','gini','blau']:
 		print(v)
 		data = df[v]
-		filename = latexPath(f"""hist-{v}.pdf""")
+		filename = latexPath(f"""hist/{v}.pdf""")
 		plt.hist(data, color='grey')
 		plt.xlabel(v)
 		xmin, xmax = data.min(), data.max()
@@ -70,10 +68,11 @@ def histograms(df):
 		# smaller bins?
 
 def kde(df):
+	Path(f"""latex/kde""").mkdir(exist_ok=True, parents=True)
 	for v in ['log10_author_count','log10_comment_count','entropy_norm','gini','blau']:
 		print(v)
 		data = df[v]
-		filename = latexPath(f"""kde-{v}.pdf""")
+		filename = latexPath(f"""kde/{v}.pdf""")
 		sns.kdeplot(data, shade=True, color='grey', legend=False)
 		plt.xlabel(v)
 		xmin, xmax = data.min(), data.max()
