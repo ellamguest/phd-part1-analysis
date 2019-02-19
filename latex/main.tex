@@ -101,7 +101,7 @@ The example findings are from February 2018, until I re-run the rest of 2018. In
 
 \subsection{General Trends}
 
-Table \ref{subLevelDesc} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. For both count measures the upper quartile is still smaller that the maximum values. I therefore decided to subset the top decile of subreddits by author count as active communities.
+Table \ref{table/all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. For both count measures the upper quartile is still smaller that the maximum values. I therefore decided to subset the top decile of subreddits by author count as active communities.
 
 
 \subsection{Default Subreddits}
@@ -119,7 +119,7 @@ Can we examine the defaults to understand the relationship between size, author 
 
 
 \subsection{Subsetting Active Subreddits}
-Table \ref{table:all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. For both count measures the upper quartile is still smaller that the maximum values. I therefore decided to subset the top decile of subreddits by author count as active communities.
+Table \ref{table/all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. For both count measures the upper quartile is still smaller that the maximum values. I therefore decided to subset the top decile of subreddits by author count as active communities.
 
 Either one or both of \textit{author count} and \textit{comment count} can be used as a proxy for subreddit activity. In the full dataset the counts have a very strong positive correlation (coef = 0.899). 
 
@@ -129,67 +129,9 @@ As shown in table \ref{table:active}, the lower quartile for blau is 0.98. 90\% 
 
 % Tables
 
-\begin{table}
-\centering
-\begin{tabular}{lrrrrr}
-\toprule
-{} &  log10\_author\_count &  log10\_comment\_count &  entropy\_norm &  gini &  blau \\
-\midrule
-mean &               0.854 &                1.072 &         0.915 & 0.196 & 0.572 \\
-std  &               0.874 &                1.045 &         0.106 & 0.216 & 0.380 \\
-min  &               0.000 &                0.000 &         0.003 & 0.000 & 0.000 \\
-25\%  &               0.000 &                0.301 &         0.885 & 0.000 & 0.000 \\
-50\%  &               0.602 &                0.778 &         0.939 & 0.150 & 0.684 \\
-75\%  &               1.322 &                1.643 &         0.985 & 0.352 & 0.916 \\
-max  &               5.835 &                6.689 &         1.000 & 0.982 & 0.999 \\
-\bottomrule
-\end{tabular}
+\input{latex/tables.tex}
 
-\caption{Descriptive Statistics for all Subreddits}
-\label{table:all} 
-\end{table}
-
-
-\begin{table}
-\centering
-\begin{tabular}{lrrrrr}
-\toprule
-{} &  log10\_author\_count &  log10\_comment\_count &  entropy\_norm &  gini &  blau \\
-\midrule
-mean &               4.494 &                4.945 &         0.827 & 0.556 & 0.965 \\
-std  &               0.612 &                0.656 &         0.111 & 0.110 & 0.063 \\
-min  &               2.248 &                2.702 &         0.394 & 0.269 & 0.678 \\
-25\%  &               4.238 &                4.630 &         0.791 & 0.480 & 0.969 \\
-50\%  &               4.492 &                4.957 &         0.876 & 0.554 & 0.990 \\
-75\%  &               4.937 &                5.340 &         0.896 & 0.619 & 0.994 \\
-max  &               5.835 &                6.689 &         0.931 & 0.833 & 0.997 \\
-\bottomrule
-\end{tabular}
-
-\caption{Descriptive Statistics for Default Subreddits}
-\label{table:defaults} 
-\end{table}
-
-
-\begin{table}
-\centering
-\begin{tabular}{lrrrrr}
-\toprule
-{} &  log10\_author\_count &  log10\_comment\_count &  entropy\_norm &  gini &  blau \\
-\midrule
-mean &               2.776 &                3.311 &         0.873 & 0.542 & 0.983 \\
-std  &               0.528 &                0.642 &         0.065 & 0.131 & 0.036 \\
-min  &               2.134 &                2.155 &         0.061 & 0.000 & 0.078 \\
-25\%  &               2.354 &                2.808 &         0.846 & 0.453 & 0.982 \\
-50\%  &               2.647 &                3.183 &         0.883 & 0.545 & 0.989 \\
-75\%  &               3.068 &                3.707 &         0.914 & 0.637 & 0.993 \\
-max  &               5.835 &                6.689 &         1.000 & 0.979 & 0.999 \\
-\bottomrule
-\end{tabular}
-
-\caption{Descriptive Statistics for Top Decile of Subreddits by Author Count}
-\label{table:active} 
-\end{table}
+\input{latex/ta
 
 
 \begin{table}
