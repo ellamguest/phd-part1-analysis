@@ -1,6 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 from scripts.tools import getDates, outputPath, figurePath, addDefaults, getSubset
 
 
