@@ -121,5 +121,5 @@ credentials.py
 credentials.json
 workflow-todos.txt
 
-.vscode/
+/.vscode
 .DS_Store
