@@ -118,4 +118,5 @@ venv.bak/
 
 gcs_service_account.json
 credentials.py
+credentials.json
 workflow-todos.txt
