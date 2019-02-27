@@ -41,7 +41,6 @@ def deciles(series):
 
 """ GOOGLE CLOUD SERVICES """
 from pathlib import Path
-from tools import cachePath, outputPath, createDirectories, getDates
 import pandas as pd
 from google.cloud import storage
 import gcsfs
@@ -85,4 +84,39 @@ def runUploads():
     os.system("./uploadCommands.sh")
     os.system("rm uploadCommands.sh")
 
+def uploadAuthorsStats():
+	dates = getDates()
+	bucket_name = 'emg-author-stats'
+
+	for date in dates:
+		files = os.listdir(cachePath(date))
+		if 'authorStats.gzip' in files:
+			filename = cachePath(f"""{date}/authorStats.gzip""")
+			uploadCommands(filename, bucket_name, date)
+
+	runUploads()
+
+def uploadAuthorsLevelStats():
+	dates = getDates()
+	bucket_name = 'emg-author-level-stats'
+
+	for date in dates:
+		files = os.listdir(outputPath(date))
+		if 'authorLevelStats.csv' in files:
+			filename = outputPath(f"""{date}/authorLevelStats.csv""")
+			uploadCommands(filename, bucket_name, date)
+
+	runUploads()
+
+def uploadSubredditLevelStats():
+	dates = getDates()
+	bucket_name = 'emg-subreddit-level-stats'
+
+	for date in dates:
+		files = os.listdir(outputPath(date))
+		if 'subredditLevelStats.csv' in files:
+			filename = outputPath(f"""{date}/subredditLevelStats.csv""")
+			uploadCommands(filename, bucket_name, date)
+
+	runUploads()
 
