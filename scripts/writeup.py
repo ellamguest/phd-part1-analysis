@@ -8,6 +8,22 @@ import seaborn as sns
 
 latexPath = lambda filename: Path(f"""latex/{filename}""")
 
+def monthlyCounts(date):
+	full = streamBlob('emg-author-subreddit-pairs-ids',date)
+	num_authors = full.author.unique().shape[0] - 1
+	num_subreddits = full.subreddit.unique().shape[0]
+	num_comments = full.num_comments.sum()
+	del_comments = full[full['author']=='[deleted]'].num_comments.sum()
+
+	counts = pd.Series({'num_authors':num_authors,
+						'num_subreddits':num_subreddits,
+						'num_comments':num_comments,
+						'del_comments':del_comments})
+
+	counts.to_csv(latexPath(f"""monthly-counts-{date}.csv"""))
+
+
+
 def tableFile(df, caption=None, label=None):
 	subset = df.copy()[['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
 	
@@ -24,7 +40,7 @@ def tables(data):
 	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
 	tableFile(data['df'], caption="Descriptive Statistics for all Subreddits", label="table/all")
 	tableFile(data['defaults'], caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
-	tableFile(data['subset'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
+	tableFile(data['active'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
 
 def subsetDecile(df, variable='author_count'):
 	"""Subsetting Active Subreddits"""
@@ -58,10 +74,10 @@ def histograms(df):
 
 def kde(df):
 	Path(f"""latex/kde""").mkdir(exist_ok=True, parents=True)
-	for v in ['log10_author_count','log10_comment_count','entropy_norm','gini','blau']:
+	for v in ['log10_author_count','log10_comment_count','entropy_norm','gini', 'blau']:
 		print(v)
 		data = df[v]
-		filename = latexPath(f"""kde/{v}.pdf""")
+		filename = latexPath(f"""kde/{v}-defaults.pdf""")
 		sns.kdeplot(data, shade=True, color='grey', legend=False)
 		plt.xlabel(v)
 		xmin, xmax = data.min(), data.max()
@@ -103,6 +119,8 @@ def loadData(date="2018-02"):
 	df = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
 	df = df[~df['subreddit'].str.startswith('u_')] # dropping homepages
 
+	df['gini'] = 1-df['gini'] #until re-run all stats with inverted gini function
+
 	df['log10_author_count'] = np.log10(df['author_count'])
 	df['log10_comment_count'] = np.log10(df['comment_count'])
 
@@ -112,15 +130,22 @@ def loadData(date="2018-02"):
 	df = addDefaults(df)
 	defaults = df[df['default']==True].sort_values('author_count')
 
-	subset = subsetDecile(df)
+	active = subsetDecile(df)
 
 	return {'date':date,
 			'df':df,
-			'subset':subset,
+			'active':active,
 			'defaults':defaults}
+
+def trueDiversity(blau):
+        """
+        blau can be expressed as a transformation of true diversity of order 2
+        """
+
+        return - np.sqrt(1/(blau-1))
 
 def run():
 	data = loadData()
-	plots(data['subset'])
+	plots(data['active'])
 	tables(data)
 

@@ -12,6 +12,7 @@ from scripts.andyTools import parallel
 import os
 from tqdm import tqdm
 import shutil
+from scripts.tools import *
 
 REQUIREMENTS = """
 conda install boto3 pandas pathlib scipy -y
@@ -36,8 +37,8 @@ def gini(values):
     sum_y = sum(v)
     n = len(v)
 
-    return ((2*sum_iy)/(n*sum_y)) - ((n+1)/n) #invert for clearer interpretation?
-
+    return 1 - ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
+    
 def gini_rewritten(values):
     """
     For a population with values yi, i = 1 to n, that are indexed in non-decreasing
