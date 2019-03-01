@@ -54,11 +54,15 @@ def fetchBlob(date):
     bucket = storage_client().get_bucket('emg-author-subreddit-pairs')
     return bucket.blob(f"""{date}.gzip""")
 
-def streamBlob(bucket_name, date):
-    print(f"""opening GCS blob {date} from bucket {bucket_name}""")
-    fs = gcsfs.GCSFileSystem(project='author-subreddit-counts',token='gcs_service_account.json')
-    with fs.open(f"""{bucket_name}/{date}.gzip""") as f:
-        return pd.read_csv(f, compression="gzip", index_col = 0)
+def streamBlob(bucket_name, date, filetype='gzip'):
+	print(f"""opening GCS blob {date} from bucket {bucket_name}""")
+	fs = gcsfs.GCSFileSystem(project='author-subreddit-counts',token='gcs_service_account.json')
+	if filetype == 'gzip':
+		compression = 'gzip'
+	else:
+		compression = None
+	with fs.open(f"""{bucket_name}/{date}.{filetype}""") as f:
+		return pd.read_csv(f, compression=compression, index_col = 0)
 
 def writeBlob(bucket_name, filename, date):
     bucket = storage_client().get_bucket(bucket_name)

@@ -24,13 +24,9 @@ def monthlyCounts(date):
 
 
 
-def tableFile(df, caption=None, label=None):
-	subset = df.copy()[['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
-	
+def tableFile(body, caption=None, label=None):
 	header = "\\begin{table}\n\centering\n"
-	body = subset.describe().drop('count').to_latex()
 	footer = f"""\caption{{{caption}}}\n\label{{{label}}}\n\end{{table}}"""
-
 	text = header + body + footer
 
 	with open(latexPath(f"""{label}.tex"""), "w") as f:
@@ -38,9 +34,15 @@ def tableFile(df, caption=None, label=None):
 
 def tables(data):
 	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
-	tableFile(data['df'], caption="Descriptive Statistics for all Subreddits", label="table/all")
-	tableFile(data['defaults'], caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
-	tableFile(data['active'], caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
+	tableFile((data['df'][['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
+						.describe().drop('count').to_latex()),
+						 caption="Descriptive Statistics for all Subreddits", label="table/all")
+	tableFile((data['defaults'][['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
+						.describe().drop('count').to_latex()),
+						caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
+	tableFile((data['active'][['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
+						.describe().drop('count').to_latex()),
+						caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
 
 def subsetDecile(df, variable='author_count'):
 	"""Subsetting Active Subreddits"""
@@ -144,8 +146,45 @@ def trueDiversity(blau):
 
         return - np.sqrt(1/(blau-1))
 
+def political():
+	pol = (getSubset(data['df'].set_index('subreddit'))[['log10_author_count', 'log10_comment_count',
+														'entropy_norm', 'gini']]
+														.sort_values('log10_author_count', ascending=False))
+
+
+
+def corrTable(df, caption=None, label=None):
+	body = df.corr().to_latex()
+	tableFile(body, caption=caption, label=label)
+	
+
 def run():
 	data = loadData()
 	plots(data['active'])
 	tables(data)
+
+
+
+
+##### AUTHOR LEVEL
+def authorLevelTable():
+	date="2018-02"
+    df = streamBlob('emg-author-level-stats', date, filetype='csv')
+
+	df = df.set_index('subreddit')
+
+	sub = df[[c for c in df.columns if 'median' in c]]
+	sub.columns = [c.replace('_median','') for c in sub.columns]
+
+	body = sub.describe().drop('count').to_latex()
+	tableFile(body, caption='Distribution of Author Medians for All Subreddits', label='table/author-medians:all')
+	
+
+	active = data['active'].subreddit
+	subset = sub.loc[active]
+
+	body = subset.describe().drop('count').to_latex()
+	tableFile(body, caption='Distribution of Author Medians for Active Subreddits', label='table/author-medians:active')
+	
+
 
