@@ -50,10 +50,10 @@ The literature suggests that the majority of participation in online communities
 To measure participation inequality I will first use the same entropy measure from 1.1. This subreddit author entropy will look at the range in number of comments made by all authors. I will then use a more traditional measure of participation inequality, though I have not yet determined which. Options include the gini coefficient and the Pareto principle but I need to do a small literature review to determine which measure has been most appropriately and successfully used for online communities.
 
 
-\subsection{Diversity Measures}
-For each subreddit $y_i$ there are $n$ comment authors. For the $nth$ author in subreddit $y_i$ there are $x_n$ number of comments, such that for each subreddit we have the vector:
+\subsection{Diversity Measures} \label{subreddit vector}
+For each subreddit $s_i$ there are $n$ comment authors. For the $nth$ author in subreddit $s_i$ there are $x_n$ number of comments, such that for each subreddit we have the vector:
 
-$$y_i = [x_1, x_2, \cdots x_n]$$
+$$s_i = [x_1, x_2, \cdots x_n]$$
 
 I then use this vector to calculate each of the diversity measures (entropy, blau, gini).
 
@@ -92,13 +92,11 @@ $$Gini = \frac{1}{n}(n+1-2\frac{\sum(n+1-i)y_i}{\sum y_i})$$
 
 
 
-\section{Analysis}
+
+
+\section{General Diversity Trends} \label{1.1}
 
 The example findings are from February 2018, until I re-run the rest of 2018. In February 2018 86,467,179 comments were made across 104,042 subreddits by 4,282,601 authors. At least 6.1\% of comments were later deleted (N=5,317,239).
-
-
-
-\subsection{General Trends}
 
 Table \ref{table/all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. For both count measures the upper quartile is still smaller that the maximum values. I therefore decided to subset the top decile of subreddits by author count as active communities.
 
@@ -112,27 +110,71 @@ Of the 20 subreddits with more than 60,000 authors 14 are default subreddits. Ho
 
 
 \subsection{Subsetting Active Subreddits}
-Table \ref{table/all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. Both size measures are very highly skewed. I therefore decided to subset the top decile of subreddits by author count as 'active subreddits'. The descriptive 
+Table \ref{table/all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. Both size measures are very highly skewed. I therefore decided to subset the top decile of subreddits by author count as 'active subreddits'.
 
-Either one or both of \textit{author count} and \textit{comment count} could be used as a proxy for level of subreddit activity. In the full dataset the counts have a very strong positive correlation (coef = 0.899). 
-
-
+Either one or both of \textit{author\_count} and \textit{comment\_count} could be used as a proxy for level of subreddit activity. In the full dataset the counts have a very strong positive correlation (coef = 0.899). 
 
 
+\subsection{Findings}
 
-\subsection{General Diversity Trends}
-
-As shown in Table \ref{table/active}, the lower quartile for blau is 0.98. 90\% of the subsetted subreddits have a blau value greater than or equal to 0.96.  Thus, blau does not appear to be an informative measure for general trends in active subreddits. However it may still be of use to look into the lower extremes for blau. Table \ref{table/active} shows the blau has a minimum value of 0.078. This outlier way provide insight.
+As shown in Table \ref{table/active}, the lower quartile for \textit{blau} is 0.98. 90\% of the subsetted subreddits have a blau value greater than or equal to 0.96.  Thus, \textit{blau} does not appear to be an informative measure for general trends in active subreddits. However it may still be of use to look into the lower extremes for \textit{blau}. Table \ref{table/active} shows \textit{blau} has a minimum value of 0.078. This outlier way provide insight.
 
 \textcolor{red}{Refer to \ref{blau index} to determine whether the blau index should be normalised.}
 
+Figure \ref{hists/active} shows the distributions for \textit{normalised entropy} and \textit{gini}. Both are normally distributed. Table \ref{table/active} shows that \textit{entropy\_norm} has quartiles Q1 = 0.846, Q2 = 0.883, Q3 = 0.914 and mean 0.873. An average normalised entropy for active subreddits it ~0.87/8. Section \ref{entropy} showed that the higher a subreddit's entropy, the greater it's diversity. As normalised entropy has an upper limit of 1, the average of 0.8 shows that most subreddits have high diversity in terms of the range of authors commenting in the subreddit.
 
-\subsection{Entropy vs Gini}
-Figure \ref{hists/active} shows the distributions for normalised entropy and gini. Both are normally distributed. Table \ref{table/active} shows that entropy\_norm has quartiles 0.846 / 0.883 / 0.914 and mean 0.873. An average normalised entropy for active subreddits it ~0.87/8. Section \ref{entropy} showed that the higher a subreddit's entropy, the greater it's diversity. As normalised entropy has an upper limit of 1, the average of 0.8 shows that most subreddits have high diversity in terms of the range of authors commenting in the subreddit.
+The same table shows that \textit{blau} has quartiles Q1 = 0.363, Q2 = 0.455, Q3 = 0.547 and mean 0.458. An average \textit{gini} for active subreddits it ~0.45. Section \ref{gini} showed that a gini coefficient of 0 means perfect equality, and 1 means perfect inequality. An average of 0.45 therefore suggests that active subreddits tend to have a mid-level of equality.
 
-The same table shows that blau has quartiles 0.453 / 0.545 / 0.647 and mean 0.542. An average gini for active subreddits it ~0.54. Section \ref{gini} showed that a gini coefficient of 0 means perfect equality, and 1 means perfect inequality. An average of 0.54 therefore suggests that active subreddits tend to have a mid-level of equality.
+Table \ref{table/corr:active} shows the correlations between variables. Normalised entropy and gini have a Pearson correlation coefficient of 0.771 and a Spearman's rank correlation coefficient of 0.898. The measures of diversity are highly positively correlated. It may be of interest to determine the for which subreddits they are not highly correlated, and why. This would help understand the relationship between the measures and how to interpret their different magnitudes. Active subreddits are highly diverse, as measured by entropy but neither inequal or equal, as measured by gini.
 
-Normalised entropy and gini have a Pearson correlation coefficient of 0.771 and a Spearman's rank correlation coefficient of 0.898. The measures of diversity are highly positively correlated. It may be of interest to determine the 
+
+\section{Author Concentration}
+
+Similar to as we saw in Section \ref{subreddit vector}, for each author $a_i$ there are $n$ number of subreddits they commented in. For the $nth$ subreddit author $a_i$ there are $x_n$ number of comments, such that for each author we have the vector:
+
+$$a_i = [x_1, x_2, \cdots x_n]$$
+
+I then use this vector to calculate the three diversity measures as described in Sections \ref{entropy}, \ref{blau index}, and \ref{gini}. For each author we have the following measures:
+
+\begin{itemize}
+    \item number of subreddits
+    \item number of comments
+    \item author comment entropy
+    \item author comment gini
+    \item author comment blau
+\end{itemize}
+
+
+\subsetion{General Trends}
+Again focusing on active subreddits - what are the stats for these values of the author level?
+
+
+
+
+\subsection{Author In-subreddit Ratio}
+I also calculate the author in-subreddit ratio for each author, for each subreddit they commented in.
+For author $A$ and subreddit $S$, if $x_S$ is the number of comments $A$ made in $S$ and $\sum A_i$ is the number of comments $A$ made across all subreddits, the author in-subreddit ratio is:
+
+$$insub_A_S = \frac{x_s}{\sum A_i}$$
+
+\subsection{Aggregating to Subreddit Level}
+Section \ref{1.1} characterised subreddits by how authors behaved within subreddits. By now focusing on author activity across subreddits, we can look at how subreddits consists of authors who actor outside of their own space...
+
+By aggregating author statistics to the subreddit level we can determine in certain subreddits tend to attract/consist of authors who are more or less diverse across the entire Reddit platform.
+
+
+
+
+
+
+\section{Political Case Studies}
+
+% table of actual values
+% table of value ranks
+% how do they vary from the general trends?
+
+\subsection{Interpretation}
+
 
 
 
@@ -140,6 +182,7 @@ Normalised entropy and gini have a Pearson correlation coefficient of 0.771 and 
 \input{latex/table/all.tex}
 \input{latex/table/defaults.tex}
 \input{latex/table/active.tex}
+%\input{latex/tabe/corr:active.tex}
 
 
 
@@ -148,11 +191,15 @@ Normalised entropy and gini have a Pearson correlation coefficient of 0.771 and 
 
 
 
-\section{Robustness Checks}
+\section{Proposed Robustness Checks}
+
+\subsection{Change Subset Threshold}
+
+Compare results to those for the top 5\% or top 20\& of authors?
 
 \subsection{Longitudinal Variation}
 
-Show stability of variable over time
+Show stability of variables over time
 
 \subsection{Subsetting by Comment Count}
 
