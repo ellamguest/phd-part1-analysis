@@ -15,8 +15,7 @@ import shutil
 from scripts.tools import *
 
 REQUIREMENTS = """
-conda install boto3 pandas pathlib scipy -y
-pip install google-cloud-bigquery
+conda install pandas pathlib scipy -y
 pip install google-cloud-storage
 """
 
@@ -37,7 +36,35 @@ def gini(values):
     sum_y = sum(v)
     n = len(v)
 
-    return 1 - ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
+    return 1 - (((2*sum_iy)/(n*sum_y)) - ((n+1)/n))
+
+def blau(values):
+    pi = values/np.sum(values)
+    pi2 = [p**2 for p in pi]
+    sum_pi2 = np.sum(pi2)
+    
+    return 1-sum_pi2
+
+
+
+""" unused index versions """
+def blauNormal(blau, N):
+    """
+    takes the blau and size of population (N)
+    returns the normalized Herfindahl index
+    """
+    nom = blau - (1/N)
+    den = 1 - (1/N)
+
+    return nom / den
+    
+def trueDiversity(blau):
+        """
+        blau can be expressed as a transformation of true diversity of order 2
+        """
+
+        return - np.sqrt(1/(blau-1))
+
 
 def gini_rewritten(values):
     """
@@ -56,25 +83,39 @@ def gini_rewritten(values):
 
     return (1/n)*(n+1-2*(sum(main)/sum(v)))
 
-def blau(values):
-    pi = values/np.sum(values)
-    pi2 = [p**2 for p in pi]
-    sum_pi2 = np.sum(pi2)
-    
-    return 1-sum_pi2
 
-def blauNormal(blau, N):
+
+"""RUNNING STATS ON DATA"""  
+def sortedIds(series):
+    order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
+    return dict(zip(order['index'], order['level_0']))
+
+def runIDS(date):
     """
-    takes the blau and size of population (N)
-    returns the normalized Herfindahl index
+    depends on a blob for that date existing in the bucket GCS bucket emg-author-subreddit-pairs,
+    with columns author, subreddit, num_comments
     """
-    nom = blau - (1/N)
-    den = 1 - (1/N)
+    createDirectories(date)
+    input_bucket = 'emg-author-subreddit-pairs'
+    output_bucket = 'emg-author-subreddit-pairs-ids'
+    df = streamBlob(input_bucket, date)
+    df = df.reset_index().astype({'author':str,'subreddit':str,'num_comments':int})
 
-    return nom / den
+    print("getting subreddit ids")
+    subIds = sortedIds(df['subreddit'])
+    df['subreddit_id'] = df['subreddit'].map(lambda x: subIds[x])
 
+    print("getting author ids")
+    authorIds = sortedIds(df['author'])
+    df['author_id']=df['author'].map(lambda x: authorIds[x])
 
-"""RUNNING STATS ON DATA"""   
+    print("storing dataset w/ ids")
+
+    filename = cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""")
+    df.to_csv(filename,compression='gzip')
+
+    uploadCommands(filename, output_bucket, date)
+
 def CSR(df, row, col, data):
     row = df[row]
     col = df[col]
@@ -93,10 +134,7 @@ def runSubredditStats(date, drop_deleted=True):
     """Computes statistics for each author in the dataset
     variables = ['author_count',comment_count','entropy','gini','blau']
     """
-    input_bucket = 'emg-author-subreddit-pairs-ids'
-    output_bucket = 'emg-subreddit-level-stats'
-    df = streamBlob(input_bucket, date)
-    df = df.reset_index().astype({'author':str,'subreddit':str,'num_comments':int})
+    df = pd.read_csv(cachePath(f"""{date}/authorStats.gzip"""), compression='gzip')
 
     if drop_deleted:
         df = df[df['author']!='[deleted]']
@@ -112,9 +150,10 @@ def runSubredditStats(date, drop_deleted=True):
     reverseSubIds = dict(zip(df['subreddit_id'],df['subreddit']))
     output['subreddit'] = output.index.map(lambda x: reverseSubIds[x])
 
-    filename = outputPath(f"""{date}/subredditLevelStats.csv""")
+    filename = cachePath(f"""{date}/subredditLevelStats.csv""")
     output.to_csv(filename)
 
+    output_bucket = 'emg-subreddit-level-stats'
     uploadCommands(filename, output_bucket, date)
 
 def runAuthorStats(date):
@@ -170,13 +209,10 @@ def runAggAuthorStats(date, drop_deleted=True):
     AND GETS SUBREDDIT LEVEL AGGREGATE AUTHOR STATS
     """
     print("getting aggregate level author stats")
-    #input_bucket = 'emg-author-stats'
-    output_bucket = 'emg-author-level-stats'
-    #df = streamBlob(input_bucket, date)
     df = pd.read_csv(cachePath(f"""{date}/authorStats.gzip"""), compression='gzip')
-    df = df.reset_index().astype({'author':str,'subreddit':str,'aut_sub_count':int,
-                                    'aut_com_count':int, 'aut_com_entropy':int, 'aut_com_gini':int,
-                                    'aut_com_blau':int, 'aut_insub':int})
+    #df = df.reset_index().astype({'author':str,'subreddit':str,'aut_sub_count':int,
+    #                                'aut_com_count':int, 'aut_com_entropy':int, 'aut_com_gini':int,
+    #                                'aut_com_blau':int, 'aut_insub':int})
     if drop_deleted:
         df = df[df['author']!='[deleted]']
     
@@ -199,58 +235,18 @@ def runAggAuthorStats(date, drop_deleted=True):
     reverseSubIds = dict(zip(df['subreddit_id'],df['subreddit']))
     output['subreddit'] = output.index.map(lambda x: reverseSubIds[x])
 
-    filename = outputPath(f"""{date}/authorLevelStats.csv""")
+    filename = cachePath(f"""{date}/authorLevelStats.csv""")
     output.to_csv(filename)
 
+    output_bucket = 'emg-author-level-stats'
     uploadCommands(filename, output_bucket, date)
-
-def sortedIds(series):
-    order = series.value_counts().sort_values(ascending=False).reset_index().reset_index()
-    return dict(zip(order['index'], order['level_0']))
-
-def runIDS(date):
-    """
-    depends on a blob for that date existing in the bucket GCS bucket emg-author-subreddit-pairs,
-    with columns author, subreddit, num_comments
-    """
-    createDirectories(date)
-    input_bucket = 'emg-author-subreddit-pairs'
-    output_bucket = 'emg-author-subreddit-pairs-ids'
-    df = streamBlob(input_bucket, date)
-    df = df.reset_index().astype({'author':str,'subreddit':str,'num_comments':int})
-
-    print("getting subreddit ids")
-    subIds = sortedIds(df['subreddit'])
-    df['subreddit_id'] = df['subreddit'].map(lambda x: subIds[x])
-
-    print("getting author ids")
-    authorIds = sortedIds(df['author'])
-    df['author_id']=df['author'].map(lambda x: authorIds[x])
-
-    print("storing dataset w/ ids")
-
-    filename = cachePath(f"""{date}/author-subbreddit-pairs-IDs.gzip""")
-    df.to_csv(filename,compression='gzip')
-
-    uploadCommands(filename, output_bucket, date)
-
-
-def runStats(date):
-    """
-    streams data with ids
-    runs subreddit stats, author stats and aggregate author stats
-    currently does not drop deleted!
-    """
-
 
 
 def run(date):
+    createDirectories(date)
     runIDS(date)
-    runStats(date)
-    runSubredditStats(date)
     runAuthorStats(date)
     runAggAuthorStats(date)
+    runSubredditStats(date)
 
-    shutil.rmtree(cachePath(date))
-    shutil.rmtree(outputPath(date))
 

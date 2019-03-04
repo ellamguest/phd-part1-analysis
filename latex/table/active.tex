@@ -1,16 +1,16 @@
 \begin{table}
 \centering
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrrrrr}
 \toprule
-{} &  log10\_author\_count &  log10\_comment\_count &  entropy\_norm &  gini &  blau \\
+{} &  entropy &  gini &  blau &  author\_count\_log10 &  comment\_count\_log10 &  entropy\_max &  entropy\_norm \\
 \midrule
-mean &               2.776 &                3.311 &         0.873 & 0.458 & 0.983 \\
-std  &               0.528 &                0.642 &         0.065 & 0.131 & 0.036 \\
-min  &               2.134 &                2.155 &         0.061 & 0.021 & 0.078 \\
-25\%  &               2.354 &                2.808 &         0.846 & 0.363 & 0.982 \\
-50\%  &               2.647 &                3.183 &         0.883 & 0.455 & 0.989 \\
-75\%  &               3.068 &                3.707 &         0.914 & 0.547 & 0.993 \\
-max  &               5.835 &                6.689 &         1.000 & 1.000 & 0.999 \\
+mean &    5.724 & 0.476 & 0.986 &               2.798 &                3.316 &        6.443 &         0.889 \\
+std  &    1.138 & 0.137 & 0.034 &               0.524 &                0.635 &        1.208 &         0.062 \\
+min  &    0.318 & 0.021 & 0.070 &               2.158 &                2.210 &        4.970 &         0.056 \\
+25\%  &    4.913 & 0.378 & 0.986 &               2.377 &                2.818 &        5.472 &         0.862 \\
+50\%  &    5.493 & 0.471 & 0.992 &               2.667 &                3.192 &        6.142 &         0.897 \\
+75\%  &    6.325 & 0.567 & 0.996 &               3.089 &                3.704 &        7.112 &         0.927 \\
+max  &   11.976 & 1.000 & 1.000 &               5.835 &                6.662 &       13.436 &         1.000 \\
 \bottomrule
 \end{tabular}
 \caption{Descriptive Statistics for Top Decile of Subreddits by Author Count}

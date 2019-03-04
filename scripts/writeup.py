@@ -2,29 +2,48 @@
 import numpy as np
 import pandas as pd	
 import matplotlib.pyplot as plt
-from scripts.tools import addDefaults, figurePath, outputPath
+from scripts.tools import addDefaults, figurePath, cachePath
 from pathlib import Path
 import seaborn as sns
 
 latexPath = lambda filename: Path(f"""latex/{filename}""")
 
-def monthlyCounts(date):
-	full = streamBlob('emg-author-subreddit-pairs-ids',date)
-	num_authors = full.author.unique().shape[0] - 1
-	num_subreddits = full.subreddit.unique().shape[0]
-	num_comments = full.num_comments.sum()
-	del_comments = full[full['author']=='[deleted]'].num_comments.sum()
+""" TOOLS """
+def getLog(df):
+	""" for any count variable "col" in the df add a column "col_log10" """
+	copy = df.copy()
+	for col in copy.columns:
+		if 'count' in col:
+			copy[f"""{col}_log10"""] = np.log10(copy[col])
 
-	counts = pd.Series({'num_authors':num_authors,
-						'num_subreddits':num_subreddits,
-						'num_comments':num_comments,
-						'del_comments':del_comments})
+	return copy
 
-	counts.to_csv(latexPath(f"""monthly-counts-{date}.csv"""))
+def desc(df):
+	"""
+	return descriptive statistics for the df
+	dropping any variables ending with "count" (assume already ran getLog)
+	dropping 'count' from stats
+	"""
+	cols = df.columns
+	subset = df[[col for col in cols if col.endswith('count') is False]]
+	return subset.describe().drop('count')
 
 
+def subsetDecile(df, variable='author_count'):
+	"""
+	sorting df by variable
+	returns top decile of values by variable
+	"""
+	copy = df.copy().sort_values(variable, ascending=False).reset_index(drop=False)
+	tenth = copy.shape[0]/10
+	
+	return copy.loc[:np.round(tenth)-1].set_index('subreddit')
 
 def tableFile(body, caption=None, label=None):
+	"""
+	adds header and footer to give latex table body
+	opt: given caption and label for latex table
+	"""
 	header = "\\begin{table}\n\centering\n"
 	footer = f"""\caption{{{caption}}}\n\label{{{label}}}\n\end{{table}}"""
 	text = header + body + footer
@@ -32,29 +51,28 @@ def tableFile(body, caption=None, label=None):
 	with open(latexPath(f"""{label}.tex"""), "w") as f:
 		f.write(text)
 
-def tables(data):
-	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
-	tableFile((data['df'][['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
-						.describe().drop('count').to_latex()),
-						 caption="Descriptive Statistics for all Subreddits", label="table/all")
-	tableFile((data['defaults'][['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
-						.describe().drop('count').to_latex()),
-						caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
-	tableFile((data['active'][['log10_author_count','log10_comment_count','entropy_norm','gini','blau']]
-						.describe().drop('count').to_latex()),
-						caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
+def settings():
+	"""
+	defines matplotlib parameters for better plots
+	"""
 
-def subsetDecile(df, variable='author_count'):
-	"""Subsetting Active Subreddits"""
-	copy = df.copy().sort_values(variable, ascending=False).reset_index(drop=True)
-	tenth = copy.shape[0]/10
-	
-	return copy.loc[:np.round(tenth)-1]
+	pd.set_option('display.float_format', lambda x: '%.3f' % x)
+	plt.style.use(['seaborn-paper'])
+	plt.rc('font', serif='Computer Modern Roman')
+	plt.rc('figure', figsize=(3,3))
+	plt.rc('font', size=20)
 
 def histograms(df):
+	"""
+	saves histogram plots for all columns in df
+	y axis range 0-1
+	saves in path "latex/hist"
+	applied custom plt setting
+	"""
+	settings()
 	Path(f"""latex/hist""").mkdir(exist_ok=True, parents=True)
-	for v in ['log10_author_count','log10_comment_count','entropy_norm','gini','blau']:
-		print(v)
+
+	for v in df.select_dtypes('number').columns:
 		data = df[v]
 		filename = latexPath(f"""hist/{v}.pdf""")
 		plt.hist(data, color='grey')
@@ -72,14 +90,19 @@ def histograms(df):
 		plt.savefig(filename, bbox_inches='tight')
 		plt.close()
 
-		# smaller bins?
-
-def kde(df):
+def kde(df, subset='active'):
+	"""
+	saves kernel density estimate plots for all columns in df
+	y axis range 0-1
+	saves in path "latex/kde"
+	applied custom plt setting
+	"""
+	settings()
 	Path(f"""latex/kde""").mkdir(exist_ok=True, parents=True)
-	for v in ['log10_author_count','log10_comment_count','entropy_norm','gini', 'blau']:
-		print(v)
+
+	for v in df.select_dtypes('number').columns:
 		data = df[v]
-		filename = latexPath(f"""kde/{v}-defaults.pdf""")
+		filename = latexPath(f"""kde/{v}-{subset}.pdf""")
 		sns.kdeplot(data, shade=True, color='grey', legend=False)
 		plt.xlabel(v)
 		xmin, xmax = data.min(), data.max()
@@ -95,41 +118,26 @@ def kde(df):
 		plt.savefig(filename, bbox_inches='tight')
 		plt.close()
 
-		# larger bins?
-		# kernel density over log x axis
 
-def settings():
-	pd.set_option('display.float_format', lambda x: '%.3f' % x)
-	plt.style.use(['seaborn-paper'])
-	plt.rc('font', serif='Computer Modern Roman')
-	plt.rc('figure', figsize=(3,3))
-	plt.rc('font', size=20)
-
-def plots(df):
+"""SUBREDDIT LEVEL"""
+def subData(date):
+	"""
+	returns dictionary of subreddit data dataframes for date
+	df = full dataset
+	active = top decile of subreddits
+	defaults = defaults only
+	"""
 	settings()
-	histograms(df)
-	kde(df)
-
-	# hist tiny bins OR kde larger bins
-
-def loadData(date="2018-02"):
-	settings()
-
-	Path(f"""latex""").mkdir(exist_ok=True, parents=True)
 
 	date = "2018-02"
-	df = pd.read_csv(outputPath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
-	df = df[~df['subreddit'].str.startswith('u_')] # dropping homepages
-
-	df['gini'] = 1-df['gini'] #until re-run all stats with inverted gini function
-
-	df['log10_author_count'] = np.log10(df['author_count'])
-	df['log10_comment_count'] = np.log10(df['comment_count'])
+	df = pd.read_csv(cachePath(f"""{date}/subredditLevelStats.csv"""), index_col=0)
+	df = addDefaults(df)
+	df = df[~df['subreddit'].str.startswith('u_')].set_index('subreddit') # dropping homepages
+	df = getLog(df)
 
 	df['entropy_max'] = df['author_count'].apply(lambda x: np.log(x))
 	df['entropy_norm'] = df['entropy']/df['entropy_max'].fillna(0)
 
-	df = addDefaults(df)
 	defaults = df[df['default']==True].sort_values('author_count')
 
 	active = subsetDecile(df)
@@ -139,54 +147,102 @@ def loadData(date="2018-02"):
 			'active':active,
 			'defaults':defaults}
 
-def trueDiversity(blau):
-        """
-        blau can be expressed as a transformation of true diversity of order 2
-        """
+def subTables(data):
+	"""
+	saves latex table files for subreddit level data subsets
+	"""
+	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
+	tableFile(desc(data['df']).to_latex(),caption="Descriptive Statistics for all Subreddits", label="table/all")
+	tableFile(desc(data['defaults']).to_latex(),caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
+	tableFile(desc(data['active']).to_latex(),caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
 
-        return - np.sqrt(1/(blau-1))
-
-def political():
-	pol = (getSubset(data['df'].set_index('subreddit'))[['log10_author_count', 'log10_comment_count',
-														'entropy_norm', 'gini']]
-														.sort_values('log10_author_count', ascending=False))
-
-
-
-def corrTable(df, caption=None, label=None):
-	body = df.corr().to_latex()
-	tableFile(body, caption=caption, label=label)
-	
-
-def run():
-	data = loadData()
-	plots(data['active'])
-	tables(data)
-
-
+def runSub(date):
+	""" runs subreddit level data plots """
+	sub = subData(date)
+	subTables(sub)
+	kde(sub['active'])
 
 
 ##### AUTHOR LEVEL
-def authorLevelTable():
-	date = "2018-02"
-	#df = streamBlob('emg-author-level-stats', date, filetype='csv')
-	df = pd.read_csv(outputPath(f"""{date}/authorLevelStats.csv"""))
-
-	df = df.set_index('subreddit')
-	df = df[df['author']!='[deleted]']
-
-	sub = df[[c for c in df.columns if 'median' in c]]
-	sub.columns = [c.replace('_median','') for c in sub.columns]
-
-	body = sub.describe().drop('count').to_latex()
-	tableFile(body, caption='Distribution of Author Medians for All Subreddits', label='table/author-medians:all')
+def autData(date):
+	"""
+	returns dictionary of author data dataframes for date
+	df = full dataset
+	active = top decile of subreddits
+	defaults = defaults only
+	"""
+	df = pd.read_csv(cachePath(f"""{date}/authorLevelStats.csv"""))
+	df = addDefaults(df)
+	df = df[~df['subreddit'].str.startswith('u_')].set_index('subreddit')
 	
+	subset = df[[c for c in df.columns if 'median' in c]]
+	subset.columns = [c.replace('_median','') for c in subset.columns]
+	subset = getLog(subset)
 
-	active = data['active'].subreddit
-	subset = sub.loc[active]
+	defaults = df[df['default']==True]
 
-	body = subset.describe().drop('count').to_latex()
-	tableFile(body, caption='Distribution of Author Medians for Active Subreddits', label='table/author-medians:active')
+	sub = subData(date)
+	activeSubs = sub['active'].index
+	active = subset.loc[activeSubs]
+
+	return {'date':date,
+			'df':df,
+			'active':active,
+			'defaults':defaults}
+
+def autTables(data):
+	"""
+	saves latex table files for author level data subsets
+	"""
+	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
+	tableFile(desc(data['df']).to_latex(),caption="Descriptive Statistics of Author Medians for all Subreddits",label='table/author-medians:all')
+	tableFile(desc(data['defaults']).to_latex(),caption="Descriptive Statistics of Author Medians for Default Subreddits",label='table/author-medians:defaults')
+	tableFile(desc(data['active']).to_latex(),caption="Descriptive Statistics of Author Medians for Active Subreddits",label="table/author-medians:active")
+
+def runAut(date):
+	""" runs author level data plots """
+	aut = autData(date)
+	settings()
+	autTables(aut)
+	kde(aut['active'])
+
+
+""" """
+def correlations(date, subset='active'):
+	"""
+	combines subreddit-level and author-level subsets
+	"""
+	sub = subData(date)
+	aut = autData(date)
+
+	active = pd.merge(sub[subset], aut[subset], left_index=True, right_index=True)
+	body = active.corr().to_latex()
+	tableFile(body, caption="Correlations for Active subreddits", label='table/corr:active')
+
+	settings()
+	sns.heatmap(active.corr(), cmap='RdBu_r')
+
+	plt.title('Correlation Matrix for Active Subreddits')
+
+	filename = latexPath(f"""corr-{subset}.pdf""")
+	plt.savefig(filename, bbox_inches='tight')
+	plt.close()
+
+def run(date="2018-02"):
+	print("RUNNING SUBREDDIT-LEVEL DATA")
+	runSub(date)
+
+	print("RUNNING AUTHOR-LEVEL DATA")
+	runAut(date)
+
+	print("RUNNING CORRELATIONS")
+	correlations(date)
+
+	print('DONE!')
+
+
+
+
 	
 
 
