@@ -12,6 +12,7 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{amsmath}
+\usepackage{lscape} 
 
 
 \begin{document}
@@ -198,6 +199,19 @@ Table \ref{table/author-medians:active} shows the results for the top decile of 
 % Author-Level Figures
 \input{latex/figures-aut.tex}
 
+
+% Political Visuals
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{latex/pol-cluster.pdf}
+    \caption{Variable Clustermap for Political Subreddits}
+    \label{pol-cluster}
+\end{figure}
+
+\begin{landscape}
+\input{latex/table/pol.tex}
+\input{latex/table/pol:pct.tex}
+\end{landscape}
 
 
 \section{Proposed Robustness Checks}
