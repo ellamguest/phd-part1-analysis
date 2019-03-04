@@ -168,10 +168,12 @@ def run():
 
 ##### AUTHOR LEVEL
 def authorLevelTable():
-	date="2018-02"
-    df = streamBlob('emg-author-level-stats', date, filetype='csv')
+	date = "2018-02"
+	#df = streamBlob('emg-author-level-stats', date, filetype='csv')
+	df = pd.read_csv(outputPath(f"""{date}/authorLevelStats.csv"""))
 
 	df = df.set_index('subreddit')
+	df = df[df['author']!='[deleted]']
 
 	sub = df[[c for c in df.columns if 'median' in c]]
 	sub.columns = [c.replace('_median','') for c in sub.columns]

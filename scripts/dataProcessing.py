@@ -38,7 +38,7 @@ def gini(values):
     n = len(v)
 
     return 1 - ((2*sum_iy)/(n*sum_y)) - ((n+1)/n)
-    
+
 def gini_rewritten(values):
     """
     For a population with values yi, i = 1 to n, that are indexed in non-decreasing
@@ -128,7 +128,7 @@ def runAuthorStats(date):
     df = streamBlob(input_bucket, date)
     df = df.reset_index().astype({'author':str,'subreddit':str,'num_comments':int})
 
-    #df = df.sort_values(['author_id','subreddit_id'])
+    df = df.sort_values(['author_id','subreddit_id'])
     incidence = CSR(df, 'author_id', 'subreddit_id', 'num_comments')
     
     results = {}
@@ -136,7 +136,7 @@ def runAuthorStats(date):
         values = incidence[i,:].data
         results[i] = {'aut_sub_count':np.count_nonzero(values),
                'aut_com_count':np.sum(values),
-               'aut_com_entropy': stats.entropy(values),
+               'aut_com_entropy': stats.entropy(values),    
                        'aut_com_gini': gini(values),
                        'aut_com_blau': blau(values)}
     
@@ -146,6 +146,7 @@ def runAuthorStats(date):
     result['aut_insub'] = result['num_comments']/result['aut_com_count']
 
     filename = cachePath(f"""{date}/authorStats.gzip""")
+    print(f"""saving to {filename}""")
     result.to_csv(filename,compression='gzip')
 
     uploadCommands(filename, output_bucket, date)
@@ -169,9 +170,10 @@ def runAggAuthorStats(date, drop_deleted=True):
     AND GETS SUBREDDIT LEVEL AGGREGATE AUTHOR STATS
     """
     print("getting aggregate level author stats")
-    input_bucket = 'emg-author-stats'
+    #input_bucket = 'emg-author-stats'
     output_bucket = 'emg-author-level-stats'
-    df = streamBlob(input_bucket, date)
+    #df = streamBlob(input_bucket, date)
+    df = pd.read_csv(cachePath(f"""{date}/authorStats.gzip"""), compression='gzip')
     df = df.reset_index().astype({'author':str,'subreddit':str,'aut_sub_count':int,
                                     'aut_com_count':int, 'aut_com_entropy':int, 'aut_com_gini':int,
                                     'aut_com_blau':int, 'aut_insub':int})
