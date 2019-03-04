@@ -3,7 +3,7 @@
 
 \title{Part 1 - Author Interest Diversity}
 \author{Ella Guest}
-\date{February 2019}
+\date{Draft February 2019}
 
 \usepackage{natbib}
 \usepackage{graphicx}
@@ -20,6 +20,7 @@
 
 \maketitle
 
+\pagebreak
 \tableofcontents
 
 \listoffigures
@@ -111,6 +112,13 @@ Figure \ref{hists/active} and Table \ref{table/all} show that authors and commen
 Of the 20 subreddits with more than 60,000 authors 14 are default subreddits. However, of the 16 subreddits with more than 500,000 comments only 7 are defaults. In order to run the analysis, I was to remove inactive subreddits from the sample. Given the substantial difference between the most highly active, subreddits on the top end, and the low upper quartile values, I decide to subset the top decile of subreddits by author count. The analysed subset therefore consists of 10,404 of the original 104,042 subreddits.
 
 
+% Subreddit-Level Figures
+\input{latex/figures-sub.tex} \label{hists/active}
+\input{latex/table/all.tex}
+\input{latex/table/defaults.tex}
+\input{latex/table/active.tex}
+
+
 \subsection{Subsetting Active Subreddits}
 Table \ref{table/all} shows that at least half of subreddits had 3 or fewer unique comment authors in February 2018, and 4 or fewer comments. Both size measures are very highly skewed. I therefore decided to subset the top decile of subreddits by author count as 'active subreddits'.
 
@@ -123,18 +131,14 @@ As shown in Table \ref{table/active}, the lower quartile for \textit{blau} is 0.
 
 \textcolor{red}{Refer to \ref{blau index} to determine whether the blau index should be normalised.}
 
-Figure \ref{hists/active} shows the distributions for \textit{normalised entropy} and \textit{gini}. Both are normally distributed. Table \ref{table/active} shows that \textit{entropy\_norm} has quartiles Q1 = 0.846, Q2 = 0.883, Q3 = 0.914 and mean 0.873. An average normalised entropy for active subreddits it ~0.87/8. Section \ref{entropy} showed that the higher a subreddit's entropy, the greater it's diversity. As normalised entropy has an upper limit of 1, the average of 0.8 shows that most subreddits have high diversity in terms of the range of authors commenting in the subreddit.
+Figure \ref{hists/sub:active} shows the distributions for \textit{normalised entropy} and \textit{gini}. Both are normally distributed. Table \ref{table/active} shows that \textit{entropy\_norm} has quartiles Q1 = 0.846, Q2 = 0.883, Q3 = 0.914 and mean 0.873. An average normalised entropy for active subreddits it ~0.87/8. Section \ref{entropy} showed that the higher a subreddit's entropy, the greater it's diversity. As normalised entropy has an upper limit of 1, the average of 0.8 shows that most subreddits have high diversity in terms of the range of authors commenting in the subreddit.
 
 The same table shows that \textit{blau} has quartiles Q1 = 0.363, Q2 = 0.455, Q3 = 0.547 and mean 0.458. An average \textit{gini} for active subreddits it ~0.45. Section \ref{gini} showed that a gini coefficient of 0 means perfect equality, and 1 means perfect inequality. An average of 0.45 therefore suggests that active subreddits tend to have a mid-level of equality.
 
-Table \ref{table/corr:active} shows the correlations between variables. Normalised entropy and gini have a Pearson correlation coefficient of 0.771 and a Spearman's rank correlation coefficient of 0.898. The measures of diversity are highly positively correlated. It may be of interest to determine the for which subreddits they are not highly correlated, and why. This would help understand the relationship between the measures and how to interpret their different magnitudes. Active subreddits are highly diverse, as measured by entropy but neither inequal or equal, as measured by gini.
+Normalised entropy and gini have a Pearson correlation coefficient of 0.771 and a Spearman's rank correlation coefficient of 0.898. The measures of diversity are highly positively correlated. It may be of interest to determine the for which subreddits they are not highly correlated, and why. This would help understand the relationship between the measures and how to interpret their different magnitudes. Active subreddits are highly diverse, as measured by entropy but neither inequal or equal, as measured by gini.
 
 
-% Subreddit-Level Figures
-\input{latex/figures-sub.tex}
-\input{latex/table/all.tex}
-\input{latex/table/defaults.tex}
-\input{latex/table/active.tex}
+
 
 
 
@@ -168,6 +172,7 @@ For author $A$ and subreddit $S$, if $x_S$ is the number of comments $A$ made in
 
 $$insub_A{}_S = \frac{x_s}{\sum A_i}$$
 
+
 \subsection{Aggregating to Subreddit Level}
 Section \ref{1.1} characterised subreddits by how authors behaved within subreddits. By now focusing on author activity across subreddits, we can look at how subreddits consists of authors who actor outside of their own space...
 
@@ -178,11 +183,21 @@ Table \ref{table/author-medians:all} shows the results for all subreddits. Again
 Table \ref{table/author-medians:active} shows the results for the top decile of active subreddits. 
 
 % Author-Level Figure
-
-\input{latex/table/corr:active.tex}
 \input{latex/table/author-medians:all.tex}
 \input{latex/table/author-medians:active.tex}
 \input{latex/figures-aut.tex}
+
+
+......
+
+\begin{figure}
+    \includegraphics[scale=0.5]{latex/corr-active.pdf}
+    \caption{Correlation Heatmap of Subreddit- and Author-Level Statistics}
+    \label{corr-active}
+\end{figure}
+
+Figure \ref{corr-active} shows the correlations among subreddit- and author-level statistics for active subreddits.
+
 
 
 \pagebreak
