@@ -235,11 +235,13 @@ def correlations(date, subset='active'):
 	plt.close()
 
 	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
-	pol = getSubset(active.rank(pct=True, ascending=True))
-	sns.clustermap(pol.T, cmap='Reds')
-	plt.title('Variable Clustermap for Political Subreddits')
 
-	filename = latexPath(f"""pol-cluster.pdf""")
+	pd.set_option('display.float_format', lambda x: '%.2f' % x)
+	pol = getSubset(active.rank(pct=True, ascending=True))
+	plt.figure(figsize=(12,12))
+	sns.heatmap(pol.T, cmap='Reds', annot=True)
+	plt.title('Political Subreddit Variable (Active) Percentiles')
+	filename = latexPath(f"""pol-heatmap.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
