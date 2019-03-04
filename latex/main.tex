@@ -145,7 +145,7 @@ I then use this vector to calculate the three diversity measures as described in
 \end{itemize}
 
 
-\subsetion{General Trends}
+\subsection{General Trends}
 Again focusing on active subreddits - what are the stats for these values of the author level?
 
 
@@ -155,12 +155,14 @@ Again focusing on active subreddits - what are the stats for these values of the
 I also calculate the author in-subreddit ratio for each author, for each subreddit they commented in.
 For author $A$ and subreddit $S$, if $x_S$ is the number of comments $A$ made in $S$ and $\sum A_i$ is the number of comments $A$ made across all subreddits, the author in-subreddit ratio is:
 
-$$insub_A_S = \frac{x_s}{\sum A_i}$$
+$$insub_A{}_S = \frac{x_s}{\sum A_i}$$
 
 \subsection{Aggregating to Subreddit Level}
 Section \ref{1.1} characterised subreddits by how authors behaved within subreddits. By now focusing on author activity across subreddits, we can look at how subreddits consists of authors who actor outside of their own space...
 
-By aggregating author statistics to the subreddit level we can determine in certain subreddits tend to attract/consist of authors who are more or less diverse across the entire Reddit platform.
+By aggregating author statistics to the subreddit level we can determine in certain subreddits tend to attract/consist of authors who are more or less diverse across the entire Reddit platform. For each subreddit I take the median value of each value across all authors who commented in that subreddit. For example, if 500 authors commented in r/ExampleSubreddit, I would take the median value of comment entropy for those 500 authors. I then repeat this for all variables, for all subreddits.
+
+Table \ref{table/authors-medians:all} shows the results for all subreddits. Again the count values are highly skewed across subreddits. The lower 75\% of subreddits have an average author subreddit count of 20 or less, and an average author comment count of 90 or less. However the maximum values are 38,750 and 5,317,239 respectively. 4593 subreddits have these values because all were only commented in by {X - verify redditor, .... nope on wrong path, didn't remove deleted}
 
 
 
@@ -182,7 +184,9 @@ By aggregating author statistics to the subreddit level we can determine in cert
 \input{latex/table/all.tex}
 \input{latex/table/defaults.tex}
 \input{latex/table/active.tex}
-%\input{latex/tabe/corr:active.tex}
+\input{latex/table/corr:active.tex}
+\input{latex/table/author-medians:all.tex}
+\input{latex/table/author-medians:active.tex}
 
 
 
