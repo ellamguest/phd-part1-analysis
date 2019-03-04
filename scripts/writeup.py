@@ -154,9 +154,9 @@ def subTables(data):
 	saves latex table files for subreddit level data subsets
 	"""
 	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
-	tableFile(desc(data['df']).to_latex(),caption="Descriptive Statistics for all Subreddits", label="table/all")
-	tableFile(desc(data['defaults']).to_latex(),caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
-	tableFile(desc(data['active']).to_latex(),caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
+	tableFile(desc(data['df']).T.to_latex(),caption="Descriptive Statistics for all Subreddits", label="table/all")
+	tableFile(desc(data['defaults']).T.to_latex(),caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
+	tableFile(desc(data['active']).T.to_latex(),caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
 
 def runSub(date):
 	""" runs subreddit level data plots """
@@ -173,7 +173,7 @@ def autData(date):
 	active = top decile of subreddits
 	defaults = defaults only
 	"""
-	df = pd.read_csv(cachePath(f"""{date}/authorLevelStats.csv"""))
+	df = pd.read_csv(cachePath(f"""{date}/authorLevelStats.csv"""), index_col=0)
 	df = addDefaults(df)
 	df = df[~df['subreddit'].str.startswith('u_')].set_index('subreddit')
 	
@@ -225,10 +225,15 @@ def correlations(date, subset='active'):
 	tableFile(body, caption="Correlations for Active subreddits", label='table/corr:active')
 
 	settings()
+	pd.set_option('display.float_format', lambda x: '%.2f' % x)
+	plt.rc('font', size=10)
 
 	print("GETTING CORRELATION HEATMAP")
-	sns.heatmap(active.corr(), cmap='RdBu_r')
-	plt.title('Correlation Matrix for Active Subreddits')
+	plt.figure(figsize=(12,12))
+	plt.xticks(size=14)
+	plt.yticks(size=14)
+	sns.heatmap(active.corr(), cmap='RdBu_r', annot=True)
+	plt.title('Correlation Matrix for Active Subreddits', size=20)
 
 	filename = latexPath(f"""corr-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
@@ -237,10 +242,12 @@ def correlations(date, subset='active'):
 	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
 
 	pd.set_option('display.float_format', lambda x: '%.2f' % x)
-	pol = getSubset(active.rank(pct=True, ascending=True))
+	pol = getSubset(active.rank(pct=True, ascending=True)).drop('default', axis=1)
 	plt.figure(figsize=(12,12))
+	plt.xticks(size=14)
+	plt.yticks(size=14)
 	sns.heatmap(pol.T, cmap='Reds', annot=True)
-	plt.title('Political Subreddit Variable (Active) Percentiles')
+	plt.title('Political Subreddit Variable (Active) Percentiles', size=20)
 	filename = latexPath(f"""pol-heatmap.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
