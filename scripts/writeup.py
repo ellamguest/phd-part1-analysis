@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd	
 import matplotlib.pyplot as plt
-from scripts.tools import addDefaults, figurePath, cachePath
+from scripts.tools import addDefaults, figurePath, cachePath, getSubset
 from pathlib import Path
 import seaborn as sns
 
@@ -145,7 +145,9 @@ def subData(date):
 	return {'date':date,
 			'df':df,
 			'active':active,
-			'defaults':defaults}
+			'defaults':defaults,
+			'pol':getSubset(df),
+			'pol_active_ranks':getSubset(active.rank(pct=True))}
 
 def subTables(data):
 	"""
@@ -188,7 +190,9 @@ def autData(date):
 	return {'date':date,
 			'df':df,
 			'active':active,
-			'defaults':defaults}
+			'defaults':defaults,
+			'pol':getSubset(df),
+			'pol_active_ranks':getSubset(active.rank(pct=True))}
 
 def autTables(data):
 	"""
@@ -215,18 +219,33 @@ def correlations(date, subset='active'):
 	sub = subData(date)
 	aut = autData(date)
 
+	print("GETTING CORRELATION TABLE")
 	active = pd.merge(sub[subset], aut[subset], left_index=True, right_index=True)
 	body = active.corr().to_latex()
 	tableFile(body, caption="Correlations for Active subreddits", label='table/corr:active')
 
 	settings()
-	sns.heatmap(active.corr(), cmap='RdBu_r')
 
+	print("GETTING CORRELATION HEATMAP")
+	sns.heatmap(active.corr(), cmap='RdBu_r')
 	plt.title('Correlation Matrix for Active Subreddits')
 
 	filename = latexPath(f"""corr-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
+
+	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
+	pol = getSubset(active.rank(pct=True, ascending=True))
+	sns.clustermap(pol.T, cmap='Reds')
+	plt.title('Variable Clustermap for Political Subreddits')
+
+	filename = latexPath(f"""pol-cluster.pdf""")
+	plt.savefig(filename, bbox_inches='tight')
+	plt.close()
+
+	print("GETTING POLTICAL SUBREDDIT TABLES")
+	tableFile(pol.T.to_latex(), caption="Political Subreddit Result Percentiles", label='table/pol:pct')
+	tableFile(getSubset(active).T.to_latex(), caption="Political Subreddit Results", label='table/pol')
 
 def run(date="2018-02"):
 	print("RUNNING SUBREDDIT-LEVEL DATA")
