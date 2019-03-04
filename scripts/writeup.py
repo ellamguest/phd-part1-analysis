@@ -154,9 +154,9 @@ def subTables(data):
 	saves latex table files for subreddit level data subsets
 	"""
 	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
-	tableFile(desc(data['df']).T.to_latex(),caption="Descriptive Statistics for all Subreddits", label="table/all")
-	tableFile(desc(data['defaults']).T.to_latex(),caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
-	tableFile(desc(data['active']).T.to_latex(),caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
+	tableFile(desc(data['df']).T.sort_index().to_latex(),caption="Descriptive Statistics for all Subreddits", label="table/all")
+	tableFile(desc(data['defaults']).T.sort_index().to_latex(),caption="Descriptive Statistics for Default Subreddits", label="table/defaults")
+	tableFile(desc(data['active']).T.sort_index().to_latex(),caption="Descriptive Statistics for Top Decile of Subreddits by Author Count", label="table/active")
 
 def runSub(date):
 	""" runs subreddit level data plots """
@@ -199,9 +199,9 @@ def autTables(data):
 	saves latex table files for author level data subsets
 	"""
 	Path(f"""latex/table""").mkdir(exist_ok=True, parents=True)
-	tableFile(desc(data['df']).to_latex(),caption="Descriptive Statistics of Author Medians for all Subreddits",label='table/author-medians:all')
-	tableFile(desc(data['defaults']).to_latex(),caption="Descriptive Statistics of Author Medians for Default Subreddits",label='table/author-medians:defaults')
-	tableFile(desc(data['active']).to_latex(),caption="Descriptive Statistics of Author Medians for Active Subreddits",label="table/author-medians:active")
+	tableFile(desc(data['df']).T.sort_index().to_latex(),caption="Descriptive Statistics of Author Medians for all Subreddits",label='table/author-medians:all')
+	tableFile(desc(data['defaults']).T.sort_index().to_latex(),caption="Descriptive Statistics of Author Medians for Default Subreddits",label='table/author-medians:defaults')
+	tableFile(desc(data['active']).T.sort_index().to_latex(),caption="Descriptive Statistics of Author Medians for Active Subreddits",label="table/author-medians:active")
 
 def runAut(date):
 	""" runs author level data plots """

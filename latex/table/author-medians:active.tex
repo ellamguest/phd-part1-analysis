@@ -1,16 +1,15 @@
 \begin{table}
 \centering
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrrrrrr}
 \toprule
-{} &  aut\_com\_entropy &  aut\_com\_gini &  aut\_com\_blau &  aut\_insub &  aut\_sub\_count\_log10 &  aut\_com\_count\_log10 \\
+{} &  mean &   std &   min &   25\% &   50\% &   75\% &   max \\
 \midrule
-mean &            1.530 &         0.661 &         0.693 &      0.163 &                0.833 &                1.304 \\
-std  &            0.528 &         0.097 &         0.154 &      0.177 &                0.272 &                0.297 \\
-min  &            0.000 &         0.348 &         0.000 &      0.009 &                0.000 &                0.000 \\
-25\%  &            1.221 &         0.599 &         0.640 &      0.059 &                0.699 &                1.114 \\
-50\%  &            1.515 &         0.650 &         0.720 &      0.111 &                0.845 &                1.301 \\
-75\%  &            1.872 &         0.700 &         0.793 &      0.190 &                1.000 &                1.505 \\
-max  &            2.867 &         1.000 &         0.913 &      1.000 &                1.519 &                2.208 \\
+aut\_com\_blau        & 0.693 & 0.154 & 0.000 & 0.640 & 0.720 & 0.793 & 0.913 \\
+aut\_com\_count\_log10 & 1.304 & 0.297 & 0.000 & 1.114 & 1.301 & 1.505 & 2.208 \\
+aut\_com\_entropy     & 1.530 & 0.528 & 0.000 & 1.221 & 1.515 & 1.872 & 2.867 \\
+aut\_com\_gini        & 0.661 & 0.097 & 0.348 & 0.599 & 0.650 & 0.700 & 1.000 \\
+aut\_insub           & 0.163 & 0.177 & 0.009 & 0.059 & 0.111 & 0.190 & 1.000 \\
+aut\_sub\_count\_log10 & 0.833 & 0.272 & 0.000 & 0.699 & 0.845 & 1.000 & 1.519 \\
 \bottomrule
 \end{tabular}
 \caption{Descriptive Statistics of Author Medians for Active Subreddits}
