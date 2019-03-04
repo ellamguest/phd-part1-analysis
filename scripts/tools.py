@@ -23,15 +23,17 @@ def getSubset(df):
     return df.loc[subs]
 
 def addDefaults(df):
-    defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
+	defaults = """Art+AskReddit+DIY+Documentaries+EarthPorn+Futurology+GetMotivated+IAmA+InternetIsBeautiful+Jokes+\
 LifeProTips+Music+OldSchoolCool+Showerthoughts+TwoXChromosomes+UpliftingNews+WritingPrompts+\
 announcements+askscience+aww+blog+books+creepy+dataisbeautiful+explainlikeimfive+food+funny+\
 gadgets+gaming+gifs+history+listentothis+mildlyinteresting+movies+news+nosleep+nottheonion+\
 personalfinance+philosophy+photoshopbattles+pics+science+space+sports+television+tifu+\
 todayilearned+videos+worldnews+Fitness""".split('+')
-    df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
-
-    return df
+	if 'subreddit' in df.columns:
+		df['default'] = df['subreddit'].apply(lambda x: True if x in defaults else False)
+	else:
+		df['default'] = df.index.map(lambda x: True if x in defaults else False)
+	return df
 
 
 def deciles(series):

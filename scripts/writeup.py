@@ -174,21 +174,21 @@ def autData(date):
 	defaults = defaults only
 	"""
 	df = pd.read_csv(cachePath(f"""{date}/authorLevelStats.csv"""), index_col=0)
-	df = addDefaults(df)
 	df = df[~df['subreddit'].str.startswith('u_')].set_index('subreddit')
 	
 	subset = df[[c for c in df.columns if 'median' in c]]
 	subset.columns = [c.replace('_median','') for c in subset.columns]
 	subset = getLog(subset)
+	subset = addDefaults(subset)
 
-	defaults = df[df['default']==True]
+	defaults = subset[subset['default']==True]
 
 	sub = subData(date)
 	activeSubs = sub['active'].index
 	active = subset.loc[activeSubs]
 
 	return {'date':date,
-			'df':df,
+			'df':subset,
 			'active':active,
 			'defaults':defaults,
 			'pol':getSubset(df),
@@ -230,12 +230,25 @@ def correlations(date, subset='active'):
 
 	print("GETTING CORRELATION HEATMAP")
 	plt.figure(figsize=(12,12))
-	plt.xticks(size=14)
-	plt.yticks(size=14)
-	sns.heatmap(active.corr(), cmap='RdBu_r', annot=True)
-	plt.title('Correlation Matrix for Active Subreddits', size=20)
+	plt.xticks(size=12)
+	plt.yticks(size=12)
+	sns.heatmap(active.corr(), cmap='RdBu_r', annot=True, cbar=False)
 
-	filename = latexPath(f"""corr-{subset}.pdf""")
+	filename = latexPath(f"""corr-heat-{subset}.pdf""")
+	plt.savefig(filename, bbox_inches='tight')
+	plt.close()
+
+	print("GETTING CORRELATION CLUSTERMAP")
+	plt.rc('font', size=10)
+	plt.figure(figsize=(12,12))
+	plt.xticks(size=12)
+	plt.yticks(size=12)
+	cg = sns.clustermap(active.corr(), cmap='RdBu_r', annot=True)
+	cg.ax_row_dendrogram.set_visible(False)
+	cg.ax_col_dendrogram.set_visible(False)
+	cg.cax.set_visible(False)
+
+	filename = latexPath(f"""corr-cluster-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
