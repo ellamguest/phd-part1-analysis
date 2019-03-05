@@ -1,0 +1,51 @@
+\section{Author Concentration}
+
+Similar to as we saw in Section \ref{subreddit vector}, for each author $a_i$ there are $n$ number of subreddits they commented in. For the $nth$ subreddit author $a_i$ there are $x_n$ number of comments, such that for each author we have the vector:
+
+$$a_i = [x_1, x_2, \cdots x_n]$$
+
+I then use this vector to calculate the three diversity measures as described in Sections \ref{entropy}, \ref{blau index}, and \ref{gini}. For each author we have the following measures:
+
+\begin{itemize}
+    \item number of subreddits
+    \item number of comments
+    \item author comment entropy
+    \item author comment gini
+    \item author comment blau
+\end{itemize}
+
+
+\subsection{Author In-subreddit Ratio}
+I also calculate the author in-subreddit ratio for each author, for each subreddit they commented in.
+For author $A$ and subreddit $S$, if $x_S$ is the number of comments $A$ made in $S$ and $\sum A_i$ is the number of comments $A$ made across all subreddits, the author in-subreddit ratio is:
+
+$$insub_A{}_S = \frac{x_s}{\sum A_i}$$
+
+\subsection{Aggregating to Subreddit Level}
+Section \ref{sub diversity} characterised subreddits by how authors behaved within subreddits. By now focusing on author activity across subreddits, we can look at how subreddits consists of authors who actor outside of their own space...
+
+By aggregating author statistics to the subreddit level we can determine in certain subreddits tend to attract/consist of authors who are more or less diverse across the entire Reddit platform. For each subreddit I take the median value of each value across all authors who commented in that subreddit. For example, if 500 authors commented in r/ExampleSubreddit, I would take the median value of comment entropy for those 500 authors. I then repeat this for all variables, for all subreddits.
+
+% Author-Level Figure
+\input{latex/table/author-medians:all.tex}
+\input{latex/table/author-medians:active.tex}
+\input{latex/figures/aut-level.tex} \label{hists/aut:active}
+
+\subsection{General Trends}
+Again focusing on active subreddits - what are the stats for these values of the author level?
+
+Table \ref{table/author-medians:active} shows the descriptive statistics of the author-level measures for active subreddits. Figure \ref{hists/aut:active}
+
+
+Table \ref{table/author-medians:all} shows the results for all subreddits. Again the count values are highly skewed across subreddits. The lower 75\% of subreddits have an average author subreddit count of 14.5 or less, and an average author comment count of 58 or less. However the maximum values are 7,996 and 1,245,236, respectively. 433 subreddits have these values because all were only commented in by 1 redditor, \textit{imguralbumbot}, a known bot account. Therefore, I again selected the top decile of subreddits by author count for further analysis.
+
+Table \ref{table/author-medians:active} shows the results for the top decile of active subreddits. 
+......
+
+\begin{figure}
+    \includegraphics[scale=0.7]{latex/corr-cluster-active.pdf}
+    \caption{Correlation Clustermap of Subreddit- and Author-Level Statistics}
+    \label{corr-active}
+\end{figure}
+
+Figure \ref{corr-active} shows the correlations among subreddit- and author-level statistics for active subreddits.

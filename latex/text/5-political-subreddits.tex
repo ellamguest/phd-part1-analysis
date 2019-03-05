@@ -1,0 +1,53 @@
+\section{Political Case Studies}
+
+\subsection{The Subreddits}
+Currently I have 8 case study politically-oriented subreddits. There are loosely ordered from most politically right wing to most left wing, with quoted community description:
+
+\begin{enumerate}
+    \item \href{https://www.reddit.com/r/The_Donald}{r/The\_Donald: ``The\_Donald is a never-ending rally dedicated to the 45th President of the United States, Donald J. Trump."}
+    
+    \item \href{https://www.reddit.com/r/Libertarian}{r/Libertarian: ``A place to discuss free market libertarianism and related topics, and share things that would be of interest to libertarians.''}
+    
+    \item \href{https://www.reddit.com/r/Conservative}{r/Conservative: ``The place for Conservatives on Reddit." }
+    
+    \item \href{https://www.reddit.com/r/politics}{r/politics: ``/r/Politics is for news and discussion about U.S. politics."}
+    
+    \item \href{https://www.reddit.com/r/Conservative}{r/changemyview: ``A place to post an opinion you accept may be flawed, in an effort to understand other perspectives on the issue. Enter with a mindset for conversation, not debate."}
+    
+    \item \href{https://www.reddit.com/r/socialism}{r/socialism: ``This is a community to discuss current events in our world from an anti-capitalist perspective and to provide clarity to socialist ideas"}
+    \item \href{https://www.reddit.com/r/SandersForPresident}{r/SandersForPresident: ``Run Bernie Run!"}
+    \item \href{https://www.reddit.com/r/LateStageCapitalism}{r/LateStageCaptialism: ``A One-Stop-Shop for Evidence of our Social, Moral and Ideological Rot.''}
+\end{enumerate}
+
+Both r/The\_Donald and r/LateStageCapitalism clearly state that they will remove content and ban users who dissent from their respective general opinions, i.e. Pro-Trump or anti-capitalist sentiment. As such they can be considered to tacitly encourage echo chamber behaviours. At this point I take them to be my examples of a right wing and a left wing echo chamber. r/politics is the only default subreddit on the list. It is a place for general discussions on US politics, with no set political stance, thus I've place it in the middle of the list. r/changemyview was created to be an "anti-echo chamber", to actively encourage people with opposing opinions to debate each other. I therefore place it in the middle of the list. The r/Libertarian, r/Conservative, and r/socialism are all generalist subreddits which each favour their named viewpoints. r/SandersforPresident was originally inteded to supporter Bernie Sander's run for the US Presidency in 2016. It is fairly active, and likely to see a resurgence heading into 2020.
+
+\subsection{Findings}
+
+% Political Visuals
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.5]{latex/pol-heatmap.pdf}
+    \caption{Political Subreddit Variable Percentiles}
+    \label{pol-heatmap}
+\end{figure}
+
+
+\begin{landscape}
+\input{latex/table/pol.tex}
+\end{landscape}
+
+\subsubsection{Size}
+The subreddits list so far we selected from a manual search of the 500 (or 1000?) most active subreddits during a previous sampling stage. This list can be easily extended as more appropriate politically-oriented subreddits come to my attention.
+
+Figure \ref{pol-heatmap} shows the percentiles for  these political subreddits, compared to the 8094 active subreddits. The raw data can bee seen in Table \ref{table/pol}. All of the subreddits are the in 90th or higher percentile by author count, and 96th percentile for comment count (with the exception of r/socialism (89th) and r/SandersForPresident (86th). 
+
+\subsubsection{Diversity}
+All of the subreddits have a gini value lower than the median for active subreddits. The three left wing subreddits have low to middle values (29th, 34th, and 41st percentiles). These correspond to gini values of 0.39, 0.41, and 0.44. The remaining 5 subreddits are all in the lowest 5\% of subreddits by gini. These values range from 0.2 to 0.26. 
+
+All subreddits are in 89th or higher percentile for entropy. Most of the subreddits are in the 89th or higher percentile for blau. r/SandersForPresident and r/LateStageCapitalism are the exceptions at 78th and 41st, respectively. r/LateStageCapitalism in the only of the case study subreddits to have a lower than average blau. This would make it a useful example to interrogate the highly skewed distribution for blau among active subreddits. What in it's author/comment structure makes it different?
+
+
+\subsubsection{Author Insubreddit Ratio}
+Possibly the most pertinent statistics to examine is "aut\_insub", the median author insubreddit ratio for each subreddit. r/The\_Donald is in the 88th percentile at 0.27. The average author in r/The\_Donald made 27\% of their comments on Reddit in February 2018 within r/The\_Donald. We saw in Table \ref{table/author-medians:active} that for active subreddits the median aut\_insub was 0.11.
+
+r/politics also has a higher than average author insubreddit ratio (0.13, 58th). r/SandersForPresident has the lowest of the case study subreddits (0.03, 8.5th).
