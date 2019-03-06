@@ -234,7 +234,8 @@ def correlations(date, subset='active'):
 	plt.yticks(size=12)
 	sns.heatmap(active.corr(), cmap='RdBu_r', annot=True, cbar=False)
 
-	filename = latexPath(f"""corr-heat-{subset}.pdf""")
+	Path(f"""latex/matrix""").mkdir(exist_ok=True, parents=True)
+	filename = latexPath(f"""heatmap/corr-heat-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
@@ -248,20 +249,20 @@ def correlations(date, subset='active'):
 	cg.ax_col_dendrogram.set_visible(False)
 	cg.cax.set_visible(False)
 
-	filename = latexPath(f"""corr-cluster-{subset}.pdf""")
+	filename = latexPath(f"""heatmap/corr-cluster-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
 	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
 
 	pd.set_option('display.float_format', lambda x: '%.2f' % x)
+	plt.rc('font', size=12)
 	pol = getSubset(active.rank(pct=True, ascending=True)).drop('default', axis=1)
 	plt.figure(figsize=(12,12))
 	plt.xticks(size=14)
 	plt.yticks(size=14)
-	sns.heatmap(pol.T, cmap='Reds', annot=True)
-	plt.title('Political Subreddit Variable (Active) Percentiles', size=20)
-	filename = latexPath(f"""pol-heatmap.pdf""")
+	sns.heatmap(pol.T, cmap='Reds', annot=True, cbar=False)
+	filename = latexPath(f"""heatmap/pol-heatmap.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
