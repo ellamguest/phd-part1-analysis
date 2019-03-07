@@ -220,7 +220,7 @@ def correlations(date, subset='active'):
 	aut = autData(date)
 
 	print("GETTING CORRELATION TABLE")
-	active = pd.merge(sub[subset], aut[subset], left_index=True, right_index=True)
+	active = pd.merge(sub[subset], aut[subset], left_index=True, right_index=True).select_dtypes('number')
 	body = active.corr().to_latex()
 	tableFile(body, caption="Correlations for Active subreddits", label='table/corr:active')
 
@@ -268,16 +268,29 @@ def correlations(date, subset='active'):
 	plt.close()
 
 
-	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
-
+	print("GETTING POLITICAL SUBREDDIT HEATMAP")
 	pd.set_option('display.float_format', lambda x: '%.2f' % x)
 	plt.rc('font', size=12)
-	pol = getSubset(active.rank(pct=True, ascending=True)).drop('default', axis=1)
+	pol = getSubset(active.rank(pct=True, ascending=True))
 	plt.figure(figsize=(12,12))
 	plt.xticks(size=14)
 	plt.yticks(size=14)
 	sns.heatmap(pol.T, cmap='Reds', annot=True, cbar=False)
 	filename = latexPath(f"""matrix/pol-heatmap.pdf""")
+	plt.savefig(filename, bbox_inches='tight')
+	plt.close()
+
+	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
+	plt.rc('font', size=12)
+	plt.figure(figsize=(12,12))
+	plt.xticks(size=14)
+	plt.yticks(size=14)
+	cg = sns.clustermap(pol.T, cmap='RdBu_r', annot=True)
+	cg.ax_row_dendrogram.set_visible(False)
+	cg.ax_col_dendrogram.set_visible(False)
+	cg.cax.set_visible(False)
+
+	filename = latexPath(f"""matrix/pol-cluster-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
