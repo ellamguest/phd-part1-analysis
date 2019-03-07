@@ -43,9 +43,20 @@ Table \ref{table/author-medians:active} shows the results for the top decile of 
 ......
 
 \begin{figure}
-    \includegraphics[scale=0.7]{latex/corr-cluster-active.pdf}
-    \caption{Correlation Clustermap of Subreddit- and Author-Level Statistics}
-    \label{corr-active}
+    \includegraphics[scale=0.55]{latex/matrix/corr-heat-active.pdf}
+    \caption{Correlation Heatmap of Subreddit- and Author-Level Statistics for Active Authors}
+    \label{corr-heat}
 \end{figure}
 
-Figure \ref{corr-active} shows the correlations among subreddit- and author-level statistics for active subreddits.
+Figure \ref{corr-heat} shows the correlations among subreddit- and author-level statistics for active subreddits. The heat map is coloured from dark red (correlation = 1) to dark blue (correlation = -1). The paler the colour, the closer it is to 0. The pale upper-right and lower-left quadrants show that most subreddit-level statistics are not highly correlated, either positively or negatively) with author-level statistics for active subreddits. This is particularly important for author\_count and comment\_count: the author-level statistics are not dependent on subreddit size.
+
+There subreddit-level statistics with some correlation with author-level statistics are entropy, blau, and normalised entropy.
+
+\textcolor{red}{Get separate clustermap for author-level statistics. Most square are dark red or dark blue, how do they cluster?}
+
+
+\begin{figure}
+    \includegraphics[scale=0.8]{latex/matrix/corr-cluster-active.pdf}
+    \caption{Correlation Clustermap of Subreddit- and Author-Level Statistics for Active Authors}
+    \label{corr-cluster}
+\end{figure}
