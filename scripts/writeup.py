@@ -235,7 +235,7 @@ def correlations(date, subset='active'):
 	sns.heatmap(active.corr(), cmap='RdBu_r', annot=True, cbar=False)
 
 	Path(f"""latex/matrix""").mkdir(exist_ok=True, parents=True)
-	filename = latexPath(f"""heatmap/corr-heat-{subset}.pdf""")
+	filename = latexPath(f"""matrix/corr-heat-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
@@ -249,9 +249,24 @@ def correlations(date, subset='active'):
 	cg.ax_col_dendrogram.set_visible(False)
 	cg.cax.set_visible(False)
 
-	filename = latexPath(f"""heatmap/corr-cluster-{subset}.pdf""")
+	filename = latexPath(f"""matrix/corr-cluster-{subset}.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
+
+	print("GETTING author-level stats CORRELATION CLUSTERMAP")
+	plt.rc('font', size=10)
+	plt.figure(figsize=(12,12))
+	plt.xticks(size=12)
+	plt.yticks(size=12)
+	cg = sns.clustermap(aut[subset].corr(), cmap='RdBu_r', annot=True)
+	cg.ax_row_dendrogram.set_visible(False)
+	cg.ax_col_dendrogram.set_visible(False)
+	cg.cax.set_visible(False)
+
+	filename = latexPath(f"""matrix/corr-cluster-aut-{subset}.pdf""")
+	plt.savefig(filename, bbox_inches='tight')
+	plt.close()
+
 
 	print("GETTING POLITICAL SUBREDDIT CLUSTERMAP")
 
@@ -262,7 +277,7 @@ def correlations(date, subset='active'):
 	plt.xticks(size=14)
 	plt.yticks(size=14)
 	sns.heatmap(pol.T, cmap='Reds', annot=True, cbar=False)
-	filename = latexPath(f"""heatmap/pol-heatmap.pdf""")
+	filename = latexPath(f"""matrix/pol-heatmap.pdf""")
 	plt.savefig(filename, bbox_inches='tight')
 	plt.close()
 
