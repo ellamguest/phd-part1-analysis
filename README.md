@@ -33,3 +33,8 @@ The data pipeline for Part 1 (and the beginnings of Part 2) of my doctoral thesi
 ### scripts/
 - python scripts files (.py)
 - writeup.py produces figures for latex/
+
+
+## Data Collection
+
+The data used in this research is publically avaiable in Google BigQuery tables...
