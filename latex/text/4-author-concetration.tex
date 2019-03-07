@@ -52,11 +52,19 @@ Figure \ref{corr-heat} shows the correlations among subreddit- and author-level 
 
 There subreddit-level statistics with some correlation with author-level statistics are entropy, blau, and normalised entropy.
 
-\textcolor{red}{Get separate clustermap for author-level statistics. Most square are dark red or dark blue, how do they cluster?}
-
 
 \begin{figure}
-    \includegraphics[scale=0.8]{latex/matrix/corr-cluster-active.pdf}
-    \caption{Correlation Clustermap of Subreddit- and Author-Level Statistics for Active Authors}
-    \label{corr-cluster}
+    \includegraphics[scale=0.8]{latex/matrix/corr-cluster-aut-active.pdf}
+    \caption{Correlation CLustermap of Author-Level Statistics for Active Authors}
+    \label{corr-cluster-aut}
 \end{figure}
+
+Figure \ref{corr-cluster-aut} shows the correlations between author-level statistics. The statistics are clustered using Euclidean distance. There are two clear groups in the statistics. \textit{aut\_insub} and \textit{aut\_com\_gini} are positively correlated with each other (0.81) and negatively correlated with all other author-level statistics (between -0.94 and -0.53). There remaining statistics are all positively correlated with each other (between 0.59 and 0.98)
+
+Subreddits which have high median author comments counts and author subreddit counts also have high median author comment entropy and author comment blau. However, they have low median author comment entropy and median author in-subreddit ratio. 
+
+\textcolor{red}{I've done these correlations on the subreddit medians, which makes them harder to interpret - probably issues with dependence, etc. Should run on author level stats? But then what about aut\_insub?}
+
+
+\subsection{Interpretation}
+!?!
