@@ -1,4 +1,4 @@
-\section{Author Concentration}
+\section{Author Concentration} \label{author-concetration}
 
 Similar to as we saw in Section \ref{subreddit vector}, for each author $a_i$ there are $n$ number of subreddits they commented in. For the $nth$ subreddit author $a_i$ there are $x_n$ number of comments, such that for each author we have the vector:
 
@@ -22,9 +22,9 @@ For author $A$ and subreddit $S$, if $x_S$ is the number of comments $A$ made in
 $$insub_A{}_S = \frac{x_s}{\sum A_i}$$
 
 \subsection{Aggregating to Subreddit Level}
-Section \ref{sub diversity} characterised subreddits by how authors behaved within subreddits. By now focusing on author activity across subreddits, we can look at how subreddits consists of authors who actor outside of their own space...
+Section \ref{subreddit-diversity} characterised subreddits by how authors behaved within subreddits. By now focusing on author activity across subreddits, we can look at how subreddits consists of authors who actor outside of their own space...
 
-By aggregating author statistics to the subreddit level we can determine in certain subreddits tend to attract/consist of authors who are more or less diverse across the entire Reddit platform. For each subreddit I take the median value of each value across all authors who commented in that subreddit. For example, if 500 authors commented in r/ExampleSubreddit, I would take the median value of comment entropy for those 500 authors. I then repeat this for all variables, for all subreddits.
+By aggregating author statistics to the subreddit level we can determine in certain subreddits tend to attract/consist of authors who are more or less diverse across the entire Reddit platform. For each subreddit I take the median value of each value across all authors who commented in that subreddit. For example, if 500 authors commented in \textit{r/ExampleSubreddit}, I would take the median value of comment entropy for those 500 authors. I then repeat this for all variables, for all subreddits.
 
 % Author-Level Figure
 \input{latex/table/author-medians:all.tex}
